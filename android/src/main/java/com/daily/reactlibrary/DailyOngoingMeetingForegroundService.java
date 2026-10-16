@@ -8,6 +8,7 @@ import android.app.PendingIntent;
 import android.app.Service;
 import android.content.Context;
 import android.content.Intent;
+import android.content.pm.ServiceInfo;
 import android.os.Build;
 import android.os.IBinder;
 import android.util.Log;
@@ -61,6 +62,10 @@ public class DailyOngoingMeetingForegroundService extends Service {
 
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
+        if (intent == null) {
+            stopSelf();
+            return START_NOT_STICKY;
+        }
         String title = intent.getStringExtra(EXTRA_TITLE);
         if (title == null) {
             title = "In a call";
@@ -78,8 +83,11 @@ public class DailyOngoingMeetingForegroundService extends Service {
                 "drawable",
                 getPackageName());
 
-        Intent notificationIntent = new Intent(this, activityClassToOpenFromNotification);
-        PendingIntent pendingIntent = PendingIntent.getActivity(this, 0, notificationIntent, PendingIntent.FLAG_IMMUTABLE);
+        PendingIntent pendingIntent = null;
+        if (activityClassToOpenFromNotification != null) {
+            Intent notificationIntent = new Intent(this, activityClassToOpenFromNotification);
+            pendingIntent = PendingIntent.getActivity(this, 0, notificationIntent, PendingIntent.FLAG_IMMUTABLE);
+        }
 
         Notification notification = new NotificationCompat.Builder(this, NOTIFICATION_CHANNEL_ID)
                 .setContentTitle(title)
@@ -94,7 +102,15 @@ public class DailyOngoingMeetingForegroundService extends Service {
                 .build();
 
         try {
-            startForeground(NOTIFICATION_ID, notification);
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                startForeground(
+                        NOTIFICATION_ID,
+                        notification,
+                        ServiceInfo.FOREGROUND_SERVICE_TYPE_CAMERA
+                                | ServiceInfo.FOREGROUND_SERVICE_TYPE_MICROPHONE);
+            } else {
+                startForeground(NOTIFICATION_ID, notification);
+            }
         } catch (SecurityException | IllegalStateException e) {
             // SecurityException (Android 14+): camera/microphone service types require the app to be
             // in the foreground. IllegalStateException covers ForegroundServiceStartNotAllowedException.

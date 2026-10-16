@@ -1,6 +1,6 @@
 # Contributing
 
-Thank you for looking into contributing to`react-native-daily-js`!  We welcome your contributions toward making [Daily](https://www.daily.co) the easiest real-time video API for developers to use in their products.
+Thank you for looking into contributing to `react-native-daily-core`. This project is a React Native `CallClient` on Daily's native SDKs. It is separate from Daily's [`react-native-daily-js`](https://github.com/daily-co/react-native-daily-js).
 
 **Before contributing:**
 
@@ -30,7 +30,7 @@ _Bug reports_
 Before creating a new bug report, please do two things:
 
 1. If you want to report a bug you experienced while on a Daily call, try out these [troubleshooting tips](https://help.daily.co/en/articles/2303117-top-troubleshooting-tips) to see if that takes care of the bug.
-2. If you're still seeing the error, check to see if somebody else has [already filed the issue](https://github.com/daily-co/react-native-daily-js/issues) before creating a new one.
+2. If you're still seeing the error, check this repository's issues before creating a new one. Bugs in `@daily-co/react-native-daily-js` belong on [that project's issue tracker](https://github.com/daily-co/react-native-daily-js/issues).
 
 If you've done those two things and need to create an issue, we'll ask you to tell us:
 

@@ -1,195 +1,204 @@
-# react-native-daily-js
+# react-native-daily-core
 
-The Daily JavaScript library for React Native.
+A React Native `CallClient` for Daily, implemented on the official iOS and Android SDKs. It is a separate library from [`@daily-co/react-native-daily-js`](https://github.com/daily-co/react-native-daily-js), which wraps `daily-js`. This package does not import `daily-js` or `react-native-webrtc`.
 
-## Minimum OS/SDK versions
+The API follows [daily-client-ios](https://reference-ios.daily.co/documentation/daily/callclient), [daily-client-android](https://reference-android.daily.co/daily-android/co.daily/-call-client/index.html), and `daily-flutter`.
 
-This package introduces some constraints on what OS/SDK versions your project can support:
+This is a New Architecture library. It requires React Native 0.82 or newer.
 
-- **iOS**: Deployment target >= 12.0
-- **Android**: `minSdkVersion` >= 24
+## Why this library exists
+
+[`@daily-co/react-native-daily-js`](https://github.com/daily-co/react-native-daily-js) runs Daily’s JavaScript client and a pinned [`react-native-webrtc`](https://github.com/react-native-webrtc/react-native-webrtc) fork inside React Native. That works, but it is not the same stack Daily ships for native mobile. Daily built [iOS and Android SDKs on a shared Rust core](https://www.daily.co/blog/introducing-dailys-native-mobile-libraries/) (`daily-core`) so call logic stays consistent and new features land on every platform together—see [How and why Daily is using Rust](https://www.daily.co/blog/how-and-why-daily-is-using-rust-for-our-webrtc-api-platform/) for why they moved away from “load `daily-js` in a WebView or JS runtime” as the mobile story.
+
+**react-native-daily-core** is a thin React Native layer on those official SDKs (`CallClient`, native `VideoView`). You get the same API shape as Swift, Kotlin, and Flutter, without bundling the call-machine JavaScript or WebRTC polyfills.
+
+In practice that means:
+
+- **Native media path** — Video renders in the SDK’s `VideoView`; audio plays inside the SDK. Less work on the JS thread and no `MediaStreamTrack` plumbing through the bridge.
+- **Same releases as mobile SDKs** — You depend on `Daily` / `co.daily:client` (currently 0.40.0), including current libwebrtc, Android [16 KB page-size](https://developer.android.com/guide/practices/page-sizes)–aligned binaries, and fixes that apply to native clients first.
+- **iOS-only capabilities** — Features such as [Daily Adaptive HEVC](https://www.daily.co/blog/introducing-daily-adaptive-hevc-for-ios-native-video/) (hardware H.265 plus H.264 fallback for cross-platform calls) live in the native iOS SDK, not in `daily-js`. This package is the path to use that stack from React Native when you expose the native publishing APIs you need.
+- **Simpler install** — No `@daily-co/react-native-webrtc`, background timer, or get-random-values peers; iOS screen share follows Daily’s [`DailySystemBroadcast`](https://docs.daily.co/docs/ios/screen-share) flow instead of a separate RN screen-share extension bridge.
+
+Web apps should keep using [`daily-js`](https://docs.daily.co/reference/daily-js). Use this library when your React Native app should behave like a Daily native mobile client. For API differences from the old wrapper, see [MIGRATION.md](MIGRATION.md).
+
+## Requirements
+
+- Node >= 20.19.4 (see `.nvmrc`)
+- React Native >= 0.82
+- iOS deployment target >= 14
+- Android `minSdkVersion` >= 24
+- Android Gradle Plugin 8.5.1 or newer and NDK r28 or newer when you compile native code
+- `co.daily:client` 0.40.0 (pulled in by this package) and the `Daily` 0.40.0 CocoaPod
 
 ## Installation
 
-Install `react-native-daily-js` along with its peer dependencies:
-
 ```bash
-npm i @daily-co/react-native-daily-js @react-native-async-storage/async-storage@^1.15.7 react-native-background-timer@^2.3.1 react-native-get-random-values@^1.9.0
-npm i --save-exact @daily-co/react-native-webrtc@124.0.6-daily.1
+npm install react-native-daily-core
+cd ios && pod install
 ```
 
-Then, follow the below steps to set up your native project on each platform. **Note that these steps assume you're using a version of React Native that supports autolinking (>= 60).**
+Add camera and microphone usage strings to `Info.plist`, plus `UIBackgroundModes` = `voip` if audio should continue in the background. On Android, the library manifest merges camera, microphone, notification, and foreground-service permissions.
 
-> If your project uses [Expo](https://expo.dev/), use the [`config-plugin-rn-daily-js` configuration package](https://www.npmjs.com/package/@daily-co/config-plugin-rn-daily-js) instead of the following steps.
+Screen sharing on iOS uses the `DailySystemBroadcast` pod that this package depends on. Follow the [Daily iOS screen share guide](https://docs.daily.co/docs/ios/screen-share) to add the broadcast upload extension to the host app. Android screen share uses media projection; see the [Android screen share guide](https://docs.daily.co/docs/android/screen-share).
 
-### iOS
+Expo apps can use the config plugin in `app.plugin.js`. Apps moving off `@daily-co/react-native-daily-js` should read [MIGRATION.md](MIGRATION.md). That package remains Daily's maintained React Native client.
 
-Update the `platform` in your `Podfile`, since `@daily-co/react-native-webrtc` only works on iOS 12 and above:
+Setup guides: [iOS installation](https://docs.daily.co/docs/ios/installation), [Android installation](https://docs.daily.co/docs/android/installation).
 
-```ruby
-platform :ios, '12.0'
-```
+## Lifecycle
 
-> If you wish to **send screen share** from iOS, it only works on **iOS 14** and above. Therefore, in this case, please switch to using iOS 14.0 instead of iOS 12.0.
+Construct a client with `CallClient.create()`, join a room, read getters, subscribe with `on`, call `leave()` to reuse the same client, and `release()` when you are done with the native instance. `leave()` does not destroy the client; `release()` does. Do not use a client after `release()`.
 
-Then run:
-
-```bash
-npx pod-install
-```
-
-Next, you will need to update your project's `Info.plist` to add three new rows with the following keys:
-
-- `NSCameraUsageDescription`
-- `NSMicrophoneUsageDescription`
-- `UIBackgroundModes`
-
-For the first two key's values, provide user-facing strings explaining why your app is asking for camera and microphone access. **Note that the app will simply crash silently without these.**
-
-`UIBackgroundModes` is handled slightly differently and will resolve to an array. For its first item, specify the value `voip`. This ensures that audio will continue uninterrupted when your app is sent to the background.
-
-To add the new rows through Xcode, open the `Info.plist` and add the following three rows:
-
-| Key                                    | Type   | Value                                              |
-| -------------------------------------- | ------ | -------------------------------------------------- |
-| Privacy - Camera Usage Description     | String | "Daily Playground needs camera access to work"     |
-| Privacy - Microphone Usage Description | String | "Daily Playground needs microphone access to work" |
-| Required background modes              | Array  | 1 item                                             |
-| ---> Item 0                            | String | "App provides Voice over IP services"              |
-
-If you view the raw file contents of `Info.plist`, it should look like this:
-
-```
-<dict>
-    ...
-    <key>NSCameraUsageDescription</key>
-    <string>Daily Playground needs camera access to work</string>
-    <key>NSMicrophoneUsageDescription</key>
-    <string>Daily Playground needs microphone access to work</string>
-    <key>UIBackgroundModes</key>
-    <array>
-        <string>voip</string>
-    </array>
-    ...
-</dict>
-```
-
-#### Screen sharing on iOS
-
-To use the screen sharing functionality on iOS, you'll need to do a few manual steps to set up Daily's [React Native Screen Share Extension framework](https://github.com/daily-co/rn-screen-share-extension/) (already included in `react-native-daily-js`).
-Please refer to its README for a detailed walkthrough.
-
-### Android
-
-Add the following to `AndroidManifest.xml`:
-
-```xml
-<uses-permission android:name="android.permission.CAMERA" />
-<uses-feature android:name="android.hardware.camera" />
-<uses-feature android:name="android.hardware.camera.autofocus"/>
-
-<uses-permission android:name="android.permission.ACCESS_NETWORK_STATE"/>
-<uses-permission android:name="android.permission.MODIFY_AUDIO_SETTINGS" />
-<uses-permission android:name="android.permission.RECORD_AUDIO" />
-<uses-permission android:name="android.permission.WAKE_LOCK" />
-<uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE"/>
-
-<uses-permission android:name="android.permission.FOREGROUND_SERVICE"/>
-<uses-permission android:name="android.permission.FOREGROUND_SERVICE_CAMERA"/>
-<uses-permission android:name="android.permission.FOREGROUND_SERVICE_MICROPHONE"/>
-<uses-permission android:name="android.permission.FOREGROUND_SERVICE_MEDIA_PROJECTION"/>
-<uses-permission android:name="android.permission.POST_NOTIFICATIONS"/>
-
-<application>
-  // ...
-  <service android:name="com.daily.reactlibrary.DailyOngoingMeetingForegroundService" android:foregroundServiceType="camera|microphone"/>
-</application>
-```
-
-> Note: above, `android.permission.FOREGROUND_SERVICE_MEDIA_PROJECTION` is only needed if you wish to do screen sharing.
-
-Update your `minSdkVersion` in your top-level `build.gradle` file:
-
-```groovy
-minSdkVersion = 24
-```
-
-(If you run into any issues, refer to [Github issues](https://github.com/react-native-webrtc/react-native-webrtc/issues/720) like [these](https://github.com/jitsi/jitsi-meet/issues/4778), or the `react-native-webrtc` [installation docs](https://github.com/react-native-webrtc/react-native-webrtc/blob/master/Documentation/AndroidInstallation.md), which walk you through a more complicated process. The simpler process laid out above seems to work in a vanilla modern React Native CLI-based setup).
-
-## Usage
-
-`react-native-daily-js` is the React Native counterpart to `daily-js`, and can be used in pretty much the same way to add video calls to your apps. [Complete documentation for `react-native-daily-js` (as well as `daily-js`) can be found here](https://docs.daily.co/reference#using-the-react-native-daily-js-library).
-
-```ts
-import Daily from '@daily-co/react-native-daily-js';
-
-// ...
-
-// Start joining a call
-const call = Daily.createCallObject();
-call.join({ url: 'https://your-team.daily.co/allhands' });
-
-// Listen for events signaling changes to participants or their audio or video.
-// - 'participant-joined' and 'participant-left' are for remote participants only
-// - 'participant-updated' is for the local participant as well as remote participants
-const events: DailyEvent[] = [
-  'participant-joined',
-  'participant-updated',
-  'participant-left',
-];
-for (const event of events) {
-  call.on(event, () => {
-    for (const participant of Object.values(call.participants())) {
-      console.log('---');
-      console.log(`participant ${participant.user_id}:`);
-      if (participant.local) {
-        console.log('is local');
-      }
-      if (participant.audio) {
-        console.log('audio enabled', participant.audioTrack);
-      }
-      if (participant.video) {
-        console.log('video enabled', participant.videoTrack);
-      }
-    }
-  });
-}
-```
+`participants().local` is always an object while the client exists (including after `leave`). Subscription objects on `subscriptions()` describe camera and microphone profile state; screen subscribe state lives on `participant.media`.
 
 ```tsx
-import { DailyMediaView } from '@daily-co/react-native-daily-js';
+import {CallClient, VideoView, useCallState, useParticipants} from 'react-native-daily-core';
 
-// ...
+const call = await CallClient.create();
 
-<DailyMediaView
-  videoTrack={participant.videoTrack}
-  audioTrack={participant.audioTrack}
-  mirror={participant.local}
-  zOrder={participant.local ? 1 : 0}
-  style={someStyle}
-/>;
+call.on('participantJoined', () => {
+  console.log(call.participants());
+});
+
+await call.join({url: 'https://your-team.daily.co/hello'});
+
+await call.setInputsEnabled({microphone: false});
+
+<VideoView client={call} participantId={participant.id} videoSource="camera" />;
+
+await call.leave();
+call.release();
 ```
 
-[See this blog post for a more thorough walkthrough of structuring a React video-chat app powered by Daily](https://www.daily.co/blog/building-a-custom-video-chat-app-with-react). It's focused on React web, but most of it should also apply to your React Native app.
+For React Compiler–friendly function components, use `useCallState(call)` and `useParticipants(call)` instead of reading `call.callState()` or `call.participants()` during render.
 
-## Assorted considerations for app implementers
+Errors from native code reject with code `E_DAILY` and a string message, except Android screen share with no foreground activity (`E_NO_ACTIVITY`).
 
-### Participant count
+## Exports
 
-Keep in mind that simultaneously displaying videos for numerous participants can use up a lot of your phone's resources. This can make the app run more slowly and use up more of your battery, especially if you're using an older device. For larger meetings, consider only displaying a few videos at a time. In a future release, `daily-js`'s [track subscription APIs](https://www.daily.co/blog/create-dynamic-meetings-using-track-subscriptions/) will be brought over to `react-native-daily-js`, letting you avoid the network bandwidth cost of receiving video for off-screen participants.
+- `CallClient` — call session (class)
+- `VideoView` — native video renderer
+- `useCallState`, `useParticipants`, `useRemoteParticipants` — React hooks over the cache
+- Types in `src/types.ts` (re-exported from the package)
 
-### Device orientation
+`@daily-co/react-native-daily-js` APIs that are not here include `Daily.createCallObject`, `DailyMediaView`, `setLocalAudio`, and `setLocalVideo`. See [MIGRATION.md](MIGRATION.md).
 
-If you'd like to support rotating your phone while in a call, it's recommended that you do not restrict your app's supported orientations (i.e. through `Info.plist` or `AndroidManifest.xml`).
+Features not shipped in this package (absent from both native SDKs at 0.40.0) are listed under **Not shipped** in [docs/native-api.md](docs/native-api.md) (dial-in/out, waiting room, custom track injection, and similar).
 
-If you _are_ restricting your app's supported orientations (to portrait, for example), note that by default you'll end up with somewhat divergent video behavior on iOS and Android whenever you _do_ rotate your phone (to landscape, for example).
+---
 
-On iOS, your captured video will rotate to compensate for the phone's rotation, meaning that:
+## CallClient reference
 
-- Other participants will continue to see you upright
-- Your local video will be oriented the same way as other participant's videos on your phone (so you'd now need to cock your head to see it upright)
+Native parity: [iOS CallClient](https://reference-ios.daily.co/documentation/daily/callclient) · [Android CallClient](https://reference-android.daily.co/daily-android/co.daily/-call-client/index.html)
 
-On Android, your captured video will _not_ rotate to compensate for the phone's rotation, meaning that:
+### Construction
 
-- Other participants will now see you sideways
-- Your local video will _not_ be oriented the same way as other participant's videos on your phone (it will appear upright to you)
+| API | Description |
+| --- | --- |
+| `CallClient.create()` | Creates the native client on the main thread, seeds the JavaScript cache from a snapshot, and returns `CallClient`. |
+
+### Lifecycle and room
+
+| Method / getter | Arguments | Returns | Cache / events |
+| --- | --- | --- | --- |
+| `join(options)` | `url`, optional `token`, optional `clientSettings` | `Promise<void>` | Snapshot after join updates getters. Also `callStateUpdated`, participant events. |
+| `leave()` | — | `Promise<void>` | Refetches participants via snapshot; does not clear subscriptions. |
+| `release()` | — | `void` | Destroys native client; later `perform` throws. |
+| `callState()` | — | `CallState` | `callStateUpdated` |
+| `callConfigFor(url, token?)` | Room URL and optional token | `Promise<CallConfiguration>` | Does not mutate cache. |
+
+### Participants
+
+| Method / getter | Returns | Events |
+| --- | --- | --- |
+| `participants()` | `{ local, all }` | `participantJoined`, `participantUpdated`, `participantLeft`, join/leave snapshots |
+| `participantCounts()` | counts | `participantCountsUpdated` |
+| `activeSpeaker()` | `Participant \| null` | `activeSpeakerChanged` |
+
+`participantLeft` includes `reason` when the platform sends it (`hidden`, `leftCall` on iOS).
+
+### Inputs, publishing, devices
+
+| Method / getter | Notes |
+| --- | --- |
+| `inputs()`, `publishing()` | Updated by snapshots and `inputsUpdated` / `publishingUpdated`. |
+| `setInputsEnabled({ camera?, microphone? })` | Native SDK: [iOS](https://reference-ios.daily.co/documentation/daily/callclient/setinputsenabled(_:completion:)) · [Android](https://reference-android.daily.co/daily-android/co.daily/-call-client/set-inputs-enabled.html) |
+| `setIsPublishing({ camera?, microphone? })` | Same pattern as inputs. |
+| `setCameraTorch(enabled)`, `setCameraZoom(ratio)` | Camera controls. |
+| `setAudioDevice(deviceId)` | Prefer updating from `inputsUpdated`; the getter is not set optimistically. |
+| `availableDevices()`, `audioDevice()` | `availableDevicesUpdated`; snapshot may include `audioDevice`. |
+
+### Subscriptions and permissions
+
+| Method | Notes |
+| --- | --- |
+| `subscriptions()`, `subscriptionProfiles()` | Seeded at create when the SDK emits them; updated by `subscriptionsUpdated` / `subscriptionProfilesUpdated`. Camera and microphone on the subscription object; screen on participant media. |
+| `setSubscriptionState(participantId, media)` | `media`: `camera`, `microphone`, `screenVideo`, etc. |
+| `setSubscriptionProfile(participantId, profile)` | Profile name string. |
+| `updatePermissions(participantId, { canSend?, canAdmin? })` | Admin updates may be ignored on native side for some fields. |
+| `updateRemoteParticipants(updates)` | Batch remote input updates. |
+| `ejectRemoteParticipants(ids)` | Remove remote participants. |
+
+### Messages and screen share
+
+| Method | Notes |
+| --- | --- |
+| `sendAppMessage(message, to?)` | `message` must already be JSON text (same as native). Optional `to` participant id; omit to broadcast. |
+| `startScreenShare()` | iOS: ReplayKit via SDK on main thread; may emit `systemBroadcastStarted` / `systemBroadcastStopped`. Android: media projection intent on main thread; requires foreground activity (`E_NO_ACTIVITY` otherwise). |
+| `stopScreenShare()` | Android stops the projection foreground service when sharing ends. |
+
+### Recording, live streaming, transcription
+
+| Methods | Events |
+| --- | --- |
+| `startRecording`, `stopRecording`, `updateRecording` | `recordingStarted`, `recordingStopped`, `recordingError` |
+| `startLiveStream`, `stopLiveStream`, `updateLiveStream`, `addLiveStreamingEndpoints` | `liveStreamStarted`, `liveStreamStopped`, `liveStreamError`, `liveStreamWarning` |
+| `startTranscription`, `stopTranscription` | `transcriptionStarted`, `transcriptionStopped`, `transcriptionMessage`, `transcriptionError` |
+
+### Audio levels and network
+
+| Method / getter | Notes |
+| --- | --- |
+| `startLocalAudioLevelObserver(intervalMs?)`, `stopLocalAudioLevelObserver()` | Emits `localAudioLevel`; opt-in. |
+| `startRemoteParticipantsAudioLevelObserver(intervalMs?)`, `stopRemoteParticipantsAudioLevelObserver()` | Emits `remoteParticipantsAudioLevel`. |
+| `localAudioLevel()`, `remoteParticipantsAudioLevel()` | Read latest values; do not push high-frequency levels into React state. |
+| `networkStats()` | `networkStatsUpdated` |
+| — | `networkConnectionStatusUpdated` carries a `description` string (encoded status). |
+
+### Events (`on` / `off`)
+
+Register with `call.on(event, handler)` and remove with `call.off(event, handler)` using the **same function reference**. Payload shapes match `CallClientEventMap` in the published types. All events are filtered per client id.
+
+Common events: `callStateUpdated`, `participantJoined`, `participantUpdated`, `participantLeft`, `participantCountsUpdated`, `activeSpeakerChanged`, `inputsUpdated`, `publishingUpdated`, `availableDevicesUpdated`, `subscriptionsUpdated`, `subscriptionProfilesUpdated`, `appMessage`, `appMessageFromRestApi`, `error`, recording/livestream/transcription events, `networkStatsUpdated`, `networkConnectionStatusUpdated`, `localAudioLevel`, `remoteParticipantsAudioLevel`, and on iOS `systemBroadcastStarted` / `systemBroadcastStopped`.
+
+---
+
+## VideoView
+
+Renders one participant track from a `CallClient`.
+
+| Prop | Type | Default | Description |
+| --- | --- | --- | --- |
+| `client` | `CallClient` | required | Client that owns the room. |
+| `participantId` | `string` | required | Participant id from `participants().all`. |
+| `videoSource` | `'camera' \| 'screenVideo'` | `'camera'` | Which track to show. |
+| `mirror` | `boolean` | `false` | Mirror local preview horizontally. |
+| `objectFit` | `'cover' \| 'contain'` | `'cover'` | Scale mode. |
+| `style` | `ViewStyle` | — | Layout style for the native view. |
+
+The native view refreshes when participant media changes. After `release()`, detach or unmount views for that client.
+
+---
+
+## Example
+
+`example/` is the manual test app: join, leave, local and remote video, microphone, and camera.
+
+```bash
+cd example
+npm install
+npm run ios
+npm run android
+```
+
+Copy `example/daily.env.json.example` to `example/daily.env.json` and set `url` (and optional `token`). For iOS device builds, choose your Apple Development team in Xcode (**Signing & Capabilities**); that choice stays local and is not committed. The example enables [React Compiler](https://react.dev/learn/react-compiler) 1.0 via Babel (`babel-plugin-react-compiler` first in `plugins`).

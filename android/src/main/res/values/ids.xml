@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+  <item name="client_id" type="id" />
+  <item name="participant_id" type="id" />
+  <item name="video_source" type="id" />
+</resources>

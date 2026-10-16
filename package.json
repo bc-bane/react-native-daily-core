@@ -1,57 +1,65 @@
 {
-  "name": "@daily-co/react-native-daily-js",
+  "name": "react-native-daily-core",
   "private": true,
   "//": "^ COMMENT OUT 'private: true' BEFORE RUNNING NPM PUBLISH",
-  "version": "0.89.0",
-  "description": "React Native library for making video calls using Daily",
+  "version": "0.1.0",
+  "description": "React Native CallClient for Daily, built on the iOS and Android SDKs",
   "main": "dist/index.js",
+  "react-native": "src/index.ts",
   "types": "dist/index.d.ts",
+  "codegenConfig": {
+    "name": "DailyCallClientSpec",
+    "type": "all",
+    "jsSrcsDir": "src",
+    "android": {
+      "javaPackageName": "com.daily.reactlibrary"
+    },
+    "ios": {
+      "componentProvider": {
+        "DailyVideoView": "DailyVideoView"
+      }
+    }
+  },
   "files": [
     "dist",
-    "type-overrides",
     "android/src",
     "android/build.gradle",
     "android/gradle.properties",
     "ios",
-    "react-native-daily-js.podspec",
+    "react-native-daily-core.podspec",
     "react-native.config.js",
+    "app.plugin.js",
+    "MIGRATION.md",
     "README.md",
     "LICENSE"
   ],
   "scripts": {
+    "test": "jest",
     "build": "rm -rf dist/ && tsc",
-    "postbuild": "sed -E -i.bak 's|@daily-co/daily-js|../type-overrides/@daily-co/daily-js|g' ./dist/index.d.ts && rm ./dist/index.d.ts.bak",
     "prepare": "npm run build",
     "tag": "scripts/tag",
     "prepublishOnly": "npm run tag"
   },
   "license": "BSD-2-Clause",
+  "engines": {
+    "node": ">=20.19.4"
+  },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/daily-co/react-native-daily-js.git",
-    "baseUrl": "https://github.com/daily-co/react-native-daily-js"
+    "url": "git+https://github.com/bc-bane/react-native-daily-core.git",
+    "baseUrl": "https://github.com/bc-bane/react-native-daily-core"
   },
-  "dependencies": {
-    "@daily-co/daily-js": "^0.94.0",
-    "@types/react-native-background-timer": "^2.0.0",
-    "base-64": "^1.0.0",
-    "react-native-url-polyfill": "^1.1.2"
-  },
-  "///": "WHEN ONE OF THESE CHANGE, PLEASE UPDATE README.md INSTALL SNIPPET ACCORDINGLY",
   "peerDependencies": {
-    "@daily-co/react-native-webrtc": "^124.0.6-daily.1",
-    "@react-native-async-storage/async-storage": "^1.24.0 || ^2.0.0 || ^3.0.0",
-    "react-native": ">=0.68.0",
-    "react-native-background-timer": "^2.4.1",
-    "react-native-get-random-values": "^1.11.0"
+    "react": ">=19.0.0",
+    "react-native": ">=0.82.0"
   },
   "devDependencies": {
-    "@daily-co/react-native-webrtc": "^124.0.6-daily.1",
-    "@react-native-async-storage/async-storage": "^3.0.3",
-    "@types/base-64": "^1.0.0",
-    "@types/react": "18.3.21",
-    "react-native": "0.76.9",
-    "react-native-background-timer": "^2.4.1",
+    "@types/jest": "^29.5.14",
+    "@types/react": "^19.1.1",
+    "jest": "^29.6.3",
+    "react": "19.1.1",
+    "react-native": "0.82.1",
+    "ts-jest": "^29.2.5",
     "typescript": "^5.8.3"
   }
 }

@@ -8,7 +8,7 @@ assignees: kimberleejohnson
 
 # Feature request
 
-<!--- Tell us about the feature you need added to react-native-daily-js -->
+<!--- Tell us about the feature you need added to react-native-daily-core -->
 
 # Why you need this
 

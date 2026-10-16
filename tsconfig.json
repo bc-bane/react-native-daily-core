@@ -1,7 +1,6 @@
 {
-  "exclude": ["test-compat"],
   "compilerOptions": {
-    "target": "es5",
+    "target": "es2019",
     "module": "commonjs",
     "outDir": "./dist",
     "lib": ["es2021"],
@@ -9,11 +8,10 @@
     "jsx": "react-native",
     "esModuleInterop": true,
     "allowSyntheticDefaultImports": true,
-    "baseUrl": ".",
     "declaration": true,
-    "paths": {
-      "@daily-co/daily-js": ["type-overrides/@daily-co/daily-js"]
-    },
+    "skipLibCheck": true,
     "types": ["react", "react-native"]
-  }
+  },
+  "include": ["src"],
+  "exclude": ["src/**/*.test.ts"]
 }
