@@ -90,6 +90,10 @@ function Tile({
         <View style={styles.placeholder}>
           <Text style={styles.initial}>{name.slice(0, 1).toUpperCase()}</Text>
         </View>
+      ) : screenOn && participant.info.isLocal ? (
+        <View style={styles.placeholder}>
+          <Text style={styles.sharing}>Sharing your screen</Text>
+        </View>
       ) : (
         <VideoView
           client={client}
@@ -126,6 +130,7 @@ const styles = StyleSheet.create({
   video: {flex: 1},
   placeholder: {flex: 1, alignItems: 'center', justifyContent: 'center'},
   initial: {color: call.text, fontSize: 42, fontWeight: '700'},
+  sharing: {color: call.text, fontSize: 16, fontWeight: '600', textAlign: 'center', paddingHorizontal: 16},
   nameRow: {
     position: 'absolute',
     left: 10,

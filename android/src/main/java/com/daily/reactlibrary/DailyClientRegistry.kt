@@ -33,16 +33,26 @@ import co.daily.model.streaming.StreamingStartMode
 import co.daily.model.transcription.StartTranscriptionProperties
 import co.daily.model.transcription.TranscriptionMessageData
 import co.daily.model.transcription.TranscriptionStatus
+import co.daily.settings.BitRate
 import co.daily.settings.CameraInputSettingsUpdate
 import co.daily.settings.ClientSettingsUpdate
+import co.daily.settings.Disable
+import co.daily.settings.Enable
 import co.daily.settings.FacingModeUpdate
+import co.daily.settings.FrameRate
 import co.daily.settings.InputSettings
 import co.daily.settings.InputSettingsUpdate
 import co.daily.settings.MicrophoneInputSettingsUpdate
-import co.daily.settings.ScreenVideoInputSettingsUpdate
-import co.daily.settings.VideoMediaTrackSettingsUpdate
-import co.daily.settings.PublishingSettings
 import co.daily.settings.PublishingSettingsUpdate
+import co.daily.settings.Scale
+import co.daily.settings.ScreenVideoInputSettingsUpdate
+import co.daily.settings.ScreenVideoPublishingSettingsUpdate
+import co.daily.settings.VideoEncodingSettingsUpdate
+import co.daily.settings.VideoEncodingsSettingsUpdate
+import co.daily.settings.VideoMaxQualityUpdate
+import co.daily.settings.VideoMediaTrackSettingsUpdate
+import co.daily.settings.VideoSendSettingsUpdate
+import co.daily.settings.PublishingSettings
 import co.daily.settings.subscription.MediaSubscriptionSettings
 import co.daily.settings.subscription.SubscriptionProfile
 import co.daily.settings.subscription.SubscriptionProfileSettings
@@ -180,7 +190,7 @@ private class ClientBox(
       "updatePermissions" -> client.updatePermissions(permissions(payload)) { finish(it.error?.msg, callback) }
       "updateRemoteParticipants" -> updateRemotes(payload, callback)
       "ejectRemoteParticipants" -> client.ejectRemoteParticipants(idList(payload.getJSONArray("ids"))) { finish(it.error?.msg, callback) }
-      "sendAppMessage" -> client.sendAppMessage(payload.getString("message"), recipient(payload)) { finish(it.error?.msg, callback) }
+      "sendAppMessage" -> client.sendAppMessage(jsonForAppMessage(payload.getString("message")), recipient(payload)) { finish(it.error?.msg, callback) }
       "stopScreenShare" -> client.stopScreenShare {
         DailyRuntime.applicationContextOrNull()?.let { ctx ->
           DailyScreenShareForegroundService.stop(ctx)
@@ -233,7 +243,9 @@ private class ClientBox(
   }
 
   fun startScreenShare(intent: Intent, callback: (String?, String?) -> Unit) {
-    client.startScreenShare(intent) { finish(it.error?.msg, callback) }
+    client.updatePublishing(screenSharePublishing()) {
+      client.startScreenShare(intent) { finish(it.error?.msg, callback) }
+    }
   }
 
   private fun updateInputs(payload: JSONObject, callback: (String?, String?) -> Unit) {
@@ -242,7 +254,7 @@ private class ClientBox(
       MicrophoneInputSettingsUpdate.Builder().withEnabled(it.getBoolean("isEnabled")).build()
     }
     val screenVideo = payload.optJSONObject("screenVideo")?.takeIf { it.has("isEnabled") }?.let {
-      ScreenVideoInputSettingsUpdate.Builder().withEnabled(it.getBoolean("isEnabled")).build()
+      ScreenVideoInputSettingsUpdate(isEnabled = if (it.getBoolean("isEnabled")) Enable() else Disable())
     }
     client.updateInputs(
       InputSettingsUpdate(camera = camera, microphone = microphone, screenVideo = screenVideo),
@@ -400,11 +412,11 @@ private class ClientBox(
   }
 
   override fun onAppMessage(message: String, from: ParticipantId) {
-    emit("appMessage", JSONObject().put("message", message).put("from", from.uuid.toString()))
+    emit("appMessage", JSONObject().put("message", appMessageText(message)).put("from", from.uuid.toString()))
   }
 
   override fun onAppMessageFromRestApi(message: String) {
-    emit("appMessageFromRestApi", JSONObject().put("message", message))
+    emit("appMessageFromRestApi", JSONObject().put("message", appMessageText(message)))
   }
 
   override fun onNetworkStatsUpdated(newNetworkStatistics: NetworkStats) {
@@ -494,6 +506,59 @@ private class ClientBox(
 
   override fun onTranscriptionError(message: String) {
     emit("transcriptionError", JSONObject().put("message", message))
+  }
+}
+
+private fun screenSharePublishing() = PublishingSettingsUpdate(
+  screenVideo = ScreenVideoPublishingSettingsUpdate(
+    sendSettings = VideoSendSettingsUpdate(
+      maxQuality = VideoMaxQualityUpdate.high,
+      encodings = VideoEncodingsSettingsUpdate(
+        mapOf(
+          VideoMaxQualityUpdate.high to VideoEncodingSettingsUpdate(
+            maxBitrate = BitRate(1_500_000),
+            maxFramerate = FrameRate(15),
+            scaleResolutionDownBy = Scale(2f),
+          ),
+        ),
+      ),
+    ),
+  ),
+)
+
+private fun jsonForAppMessage(message: String): String {
+  val trimmed = message.trim()
+  val alreadyJson = try {
+    when {
+      trimmed.startsWith("{") -> {
+        JSONObject(trimmed)
+        true
+      }
+      trimmed.startsWith("[") -> {
+        JSONArray(trimmed)
+        true
+      }
+      trimmed.startsWith("\"") -> {
+        JSONArray("[$trimmed]").getString(0)
+        true
+      }
+      else -> false
+    }
+  } catch (_: Exception) {
+    false
+  }
+  return if (alreadyJson) message else JSONObject.quote(message)
+}
+
+private fun appMessageText(message: String): String {
+  val trimmed = message.trim()
+  if (!trimmed.startsWith("\"")) {
+    return message
+  }
+  return try {
+    JSONArray("[$trimmed]").getString(0)
+  } catch (_: Exception) {
+    message
   }
 }
 
