@@ -4,7 +4,7 @@ A React Native `CallClient` for Daily, implemented on the official iOS and Andro
 
 The API follows [daily-client-ios](https://reference-ios.daily.co/documentation/daily/callclient), [daily-client-android](https://reference-android.daily.co/daily-android/co.daily/-call-client/index.html), and `daily-flutter`.
 
-The native bridge uses the Expo Modules API. The app needs the `expo` package (Expo SDK 58 is what the example targets) and React Native 0.82 or newer.
+Install it in an Expo app, or in a vanilla React Native app that already has its own `ios/` and `android/` projects. The native code is an Expo module, so both kinds of app depend on the `expo` and `expo-modules-core` packages. Requires React Native 0.82 or newer. The example app uses Expo SDK 58.
 
 ## Why this library exists
 
@@ -24,7 +24,7 @@ Web apps should keep using [`daily-js`](https://docs.daily.co/reference/daily-js
 ## Requirements
 
 - Node >= 22.13 (see `.nvmrc`)
-- Expo SDK with `expo-modules-core` (the example uses Expo SDK 58)
+- `expo` and `expo-modules-core` (already present in an Expo app; add them once in a vanilla React Native app)
 - React Native >= 0.82
 - iOS deployment target >= 16.4
 - Android `minSdkVersion` >= 24
@@ -33,11 +33,15 @@ Web apps should keep using [`daily-js`](https://docs.daily.co/reference/daily-js
 
 ## Installation
 
+This package installs in an Expo app and in a vanilla React Native app. Both use the same `CallClient` and `VideoView`. A vanilla app stays a normal React Native project. It adds the `expo` package so the native module can autolink. You do not create an Expo project or run prebuild.
+
 ```bash
 npm install react-native-daily-core
 ```
 
-The app must already include Expo modules. In an Expo app, add the config plugin and run prebuild (or `npx expo run:ios` / `npx expo run:android`, which prebuild for you):
+### Expo app
+
+Add the config plugin, then prebuild (or run `npx expo run:ios` / `npx expo run:android`, which prebuild for you):
 
 ```json
 {
@@ -45,11 +49,26 @@ The app must already include Expo modules. In an Expo app, add the config plugin
 }
 ```
 
-Add camera and microphone usage strings to `Info.plist`, plus `UIBackgroundModes` = `voip` if audio should continue in the background. On Android, the library manifest merges camera, microphone, notification, and foreground-service permissions.
+The plugin writes the camera and microphone usage strings, the iOS `voip` background mode, and the Android call permissions.
+
+### Vanilla React Native app
+
+If the app does not already use Expo modules, install them in the existing project first: [Install Expo modules in an existing React Native project](https://docs.expo.dev/bare/installing-expo-modules/).
+
+```bash
+npx install-expo-modules@latest
+npm install react-native-daily-core
+cd ios && pod install
+```
+
+Rebuild the iOS and Android apps. Autolinking includes the `DailyCallClient` native module from `expo-module.config.json`. The config plugin is only for Expo prebuild, so set permissions in the app yourself:
+
+- `Info.plist`: `NSCameraUsageDescription`, `NSMicrophoneUsageDescription`, and `UIBackgroundModes` = `voip` when audio should continue in the background
+- Android: the library manifest already merges camera, microphone, notification, and foreground-service permissions
 
 Screen sharing on iOS uses the `DailySystemBroadcast` pod that this package depends on. Follow the [Daily iOS screen share guide](https://docs.daily.co/docs/ios/screen-share) to add the broadcast upload extension to the host app. Android screen share uses media projection; see the [Android screen share guide](https://docs.daily.co/docs/android/screen-share).
 
-Expo apps can use the config plugin in `app.plugin.js`. Apps moving off `@daily-co/react-native-daily-js` should read [MIGRATION.md](MIGRATION.md). That package remains Daily's maintained React Native client.
+Apps moving off `@daily-co/react-native-daily-js` should read [MIGRATION.md](MIGRATION.md). That package remains Daily's maintained React Native client.
 
 Setup guides: [iOS installation](https://docs.daily.co/docs/ios/installation), [Android installation](https://docs.daily.co/docs/android/installation).
 

@@ -48,11 +48,21 @@ Remove the `ReactNativeDailyJSScreenShareExtension` target and the setup from [r
 
 React Native 0.82 and newer have no legacy architecture switch.
 
-## Expo modules
+## Expo apps and vanilla React Native apps
 
-`CallClient` and `VideoView` are an Expo module named `DailyCallClient`. JavaScript loads them with `requireNativeModule` and `requireNativeViewManager` from `expo-modules-core`. The app needs the `expo` package so Expo autolinking can include the native module. A bare React Native app installs Expo modules first ([Install Expo modules in an existing React Native project](https://docs.expo.dev/bare/installing-expo-modules/)), then this package.
+`CallClient` and `VideoView` are an Expo module named `DailyCallClient`. JavaScript loads them with `requireNativeModule` and `requireNativeViewManager` from `expo-modules-core`. The same package works in an Expo app and in a vanilla React Native app. A vanilla app keeps its own Xcode and Gradle projects. It adds the `expo` package so the native module can autolink.
 
-Add the config plugin in `app.json` (or `app.config.js`):
+**Vanilla React Native.** If the app does not already use Expo modules, install them in the existing project first: [Install Expo modules in an existing React Native project](https://docs.expo.dev/bare/installing-expo-modules/).
+
+```bash
+npx install-expo-modules@latest
+npm install react-native-daily-core
+cd ios && pod install
+```
+
+Rebuild both apps. The config plugin is only for Expo prebuild. In a vanilla app, set `NSCameraUsageDescription`, `NSMicrophoneUsageDescription`, and `UIBackgroundModes` = `voip` in `Info.plist` yourself. The Android library manifest merges the call permissions.
+
+**Expo app.** Add the config plugin in `app.json` (or `app.config.js`):
 
 ```json
 {
@@ -60,7 +70,7 @@ Add the config plugin in `app.json` (or `app.config.js`):
 }
 ```
 
-Then prebuild or run `npx expo run:ios` / `npx expo run:android`.
+Then prebuild or run `npx expo run:ios` / `npx expo run:android`. The plugin writes the usage strings and Android permissions.
 
 ### Monorepo / local package install
 
