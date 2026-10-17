@@ -97,6 +97,21 @@ export interface ClientSettingsUpdate {
   microphone?: boolean;
 }
 
+export type CameraFacingMode = 'user' | 'environment';
+
+export interface InputSettingsPatch {
+  camera?: {
+    isEnabled?: boolean;
+    facingMode?: CameraFacingMode;
+  };
+  microphone?: {
+    isEnabled?: boolean;
+  };
+  screenVideo?: {
+    isEnabled?: boolean;
+  };
+}
+
 export interface JoinOptions {
   url: string;
   token?: string;

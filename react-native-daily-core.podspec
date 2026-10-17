@@ -10,16 +10,16 @@ Pod::Spec.new do |s|
   s.homepage     = "https://github.com/bc-bane/react-native-daily-core"
   s.license      = "BSD-2-Clause"
   s.authors      = { "react-native-daily-core" => "https://github.com/bc-bane/react-native-daily-core" }
-  s.platforms    = { :ios => "14.0" }
+  s.platforms    = { :ios => "16.4" }
   s.source       = { :git => "https://github.com/bc-bane/react-native-daily-core.git", :tag => "#{s.version}" }
   s.source_files = "ios/**/*.{h,m,mm,swift}"
+  s.static_framework = true
+  s.swift_version = "5.9"
   s.pod_target_xcconfig = {
     "DEFINES_MODULE" => "YES",
-    "SWIFT_VERSION" => "5.0"
   }
 
+  s.dependency "ExpoModulesCore"
   s.dependency "Daily", "0.40.0"
   s.dependency "DailySystemBroadcast", "0.40.0"
-
-  install_modules_dependencies(s)
 end

@@ -1,118 +1,103 @@
 package com.daily.reactlibrary
 
-import android.app.Activity
-import android.content.Intent
-import com.facebook.react.bridge.Promise
-import com.facebook.react.bridge.ReactApplicationContext
-import com.facebook.react.bridge.ReactMethod
-import com.facebook.react.modules.core.DeviceEventManagerModule
+import expo.modules.kotlin.modules.Module
+import expo.modules.kotlin.modules.ModuleDefinition
+import expo.modules.kotlin.Promise
 import org.json.JSONObject
 
-class DailyCallClientModule(reactContext: ReactApplicationContext) :
-  NativeDailyCallClientSpec(reactContext) {
+class DailyCallClientModule : Module() {
+  override fun definition() = ModuleDefinition {
+    Name("DailyCallClient")
 
-  init {
-    sharedContext = reactContext
-    DailyClientRegistry.eventSink = EventSink { clientId, type, payloadJson ->
-      val body = com.facebook.react.bridge.Arguments.createMap()
-      body.putDouble("clientId", clientId.toDouble())
-      body.putString("type", type)
-      body.putString("payloadJson", payloadJson)
-      reactContext
-        .getJSModule(DeviceEventManagerModule.RCTDeviceEventEmitter::class.java)
-        .emit("DailyCallClientEvent", body)
-    }
-    reactContext.addActivityEventListener(activityListener)
-  }
+    Events("DailyCallClientEvent")
 
-  override fun getName(): String = NAME
-
-  @ReactMethod
-  override fun createClient(promise: Promise) {
-    DailyClientRegistry.postToMain {
-      try {
-        promise.resolve(DailyClientRegistry.createOnMain().toDouble())
-      } catch (error: Exception) {
-        promise.reject("E_DAILY", error.message, error)
+    OnCreate {
+      val context = appContext.reactContext
+      if (context != null) {
+        DailyRuntime.attach(context.applicationContext) { appContext.currentActivity }
+      }
+      DailyClientRegistry.eventSink = EventSink { clientId, type, payloadJson ->
+        sendEvent(
+          "DailyCallClientEvent",
+          mapOf(
+            "clientId" to clientId,
+            "type" to type,
+            "payloadJson" to payloadJson,
+          ),
+        )
       }
     }
-  }
 
-  @ReactMethod
-  override fun destroyClient(clientId: Double) {
-    DailyClientRegistry.destroy(clientId.toInt())
-  }
-
-  @ReactMethod
-  override fun perform(clientId: Double, action: String, payloadJson: String, promise: Promise) {
-    val payload = if (payloadJson.isBlank()) JSONObject() else JSONObject(payloadJson)
-    if (action == "startScreenShare") {
-      val activity = reactApplicationContext.currentActivity
-      if (activity == null) {
-        promise.reject("E_NO_ACTIVITY", "Screen share needs a foreground activity")
-        return
-      }
-      startScreenShareFromActivity(activity, clientId.toInt()) { json, error ->
-        if (error != null) promise.reject("E_DAILY", error) else promise.resolve(json ?: "{}")
-      }
-      return
+    OnDestroy {
+      DailyClientRegistry.destroyAll()
+      DailyClientRegistry.eventSink = null
+      DailyRuntime.detach()
     }
-    DailyClientRegistry.perform(clientId.toInt(), action, payload) { json, error ->
-      if (error != null) promise.reject("E_DAILY", error) else promise.resolve(json ?: "{}")
+
+    OnActivityResult { _, payload ->
+      if (payload.requestCode != DailyRuntime.SCREEN_SHARE_REQUEST) {
+        return@OnActivityResult
+      }
+      DailyRuntime.handleScreenShareResult(payload.resultCode, payload.data)
     }
-  }
 
-  @ReactMethod
-  override fun addListener(eventName: String) {}
-
-  @ReactMethod
-  override fun removeListeners(count: Double) {}
-
-  override fun invalidate() {
-    DailyClientRegistry.destroyAll()
-    pendingScreenShare?.callback?.invoke(null, "CallClient module invalidated")
-    pendingScreenShare = null
-    reactApplicationContext.removeActivityEventListener(activityListener)
-    DailyClientRegistry.eventSink = null
-    sharedContext = null
-    super.invalidate()
-  }
-
-  private val activityListener = object : com.facebook.react.bridge.ActivityEventListener {
-    override fun onActivityResult(activity: Activity, requestCode: Int, resultCode: Int, data: Intent?) {
-      if (requestCode != SCREEN_SHARE_REQUEST) return
-      val pending = pendingScreenShare
-      pendingScreenShare = null
-      if (pending == null) return
-      if (resultCode != Activity.RESULT_OK || data == null) {
-        pending.callback(null, "Screen share permission was not granted")
-        return
-      }
-      val client = DailyClientRegistry.client(pending.clientId)
-      if (client == null) {
-        pending.callback(null, "CallClient was released")
-        return
-      }
-      val appContext = reactApplicationContext.applicationContext
-      DailyScreenShareForegroundService.start(appContext)
-      client.startScreenShare(data) { result ->
-        val error = result.error?.msg
-        if (error != null) {
-          DailyScreenShareForegroundService.stop(appContext)
-          pending.callback(null, error)
-        } else {
-          pending.callback("{}", null)
+    AsyncFunction("createClient") { promise: Promise ->
+      DailyClientRegistry.postToMain {
+        try {
+          promise.resolve(DailyClientRegistry.createOnMain())
+        } catch (error: Exception) {
+          promise.reject("E_DAILY", error.message, error)
         }
       }
     }
 
-    override fun onNewIntent(intent: Intent) {}
-  }
+    Function("destroyClient") { clientId: Int ->
+      DailyClientRegistry.destroy(clientId)
+    }
 
-  companion object {
-    const val NAME = "DailyCallClient"
-    const val SCREEN_SHARE_REQUEST = 44016
-    var sharedContext: ReactApplicationContext? = null
-    var pendingScreenShare: PendingScreenShare? = null
+    AsyncFunction("perform") { clientId: Int, action: String, payloadJson: String, promise: Promise ->
+      val payload = if (payloadJson.isBlank()) JSONObject() else JSONObject(payloadJson)
+      if (action == "startScreenShare") {
+        val activity = appContext.currentActivity
+        if (activity == null) {
+          promise.reject("E_NO_ACTIVITY", "Screen share needs a foreground activity", null)
+          return@AsyncFunction
+        }
+        startScreenShareFromActivity(activity, clientId) { json, error ->
+          if (error != null) promise.reject("E_DAILY", error, null) else promise.resolve(json ?: "{}")
+        }
+        return@AsyncFunction
+      }
+      DailyClientRegistry.perform(clientId, action, payload) { json, error ->
+        if (error != null) promise.reject("E_DAILY", error, null) else promise.resolve(json ?: "{}")
+      }
+    }
+
+    View(DailyVideoHostView::class) {
+      Name("DailyVideoView")
+
+      Prop("clientId") { view: DailyVideoHostView, clientId: Int ->
+        view.clientId = clientId
+        view.refresh()
+      }
+
+      Prop("participantId") { view: DailyVideoHostView, participantId: String ->
+        view.participantId = participantId
+        view.refresh()
+      }
+
+      Prop("videoSource") { view: DailyVideoHostView, videoSource: String ->
+        view.videoSource = videoSource
+        view.refresh()
+      }
+
+      Prop("mirror") { view: DailyVideoHostView, mirror: Boolean ->
+        view.setMirror(mirror)
+      }
+
+      Prop("objectFit") { view: DailyVideoHostView, objectFit: String ->
+        view.setFit(objectFit == "contain")
+      }
+    }
   }
 }

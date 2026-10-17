@@ -1,74 +1,23 @@
-def DEFAULT_COMPILE_SDK_VERSION = 36
-def DEFAULT_BUILD_TOOLS_VERSION = '36.0.0'
-def DEFAULT_MIN_SDK_VERSION = 24
-def DEFAULT_TARGET_SDK_VERSION = 36
-
-def safeExtGet(prop, fallback) {
-    rootProject.ext.has(prop) ? rootProject.ext.get(prop) : fallback
+plugins {
+    id 'com.android.library'
+    id 'expo-module-gradle-plugin'
 }
 
-buildscript {
-    ext.kotlin_version = '2.1.20'
-    repositories {
-        google()
-        mavenCentral()
-    }
-    dependencies {
-        classpath "com.android.tools.build:gradle:8.7.2"
-        classpath "org.jetbrains.kotlin:kotlin-gradle-plugin:${kotlin_version}"
-    }
-}
-
-apply plugin: 'com.android.library'
-apply plugin: 'kotlin-android'
-
-if (project.hasProperty("newArchEnabled") && project.newArchEnabled == "true") {
-    apply plugin: "com.facebook.react"
-}
+group = 'com.daily.reactlibrary'
+version = '0.1.0'
 
 android {
     namespace 'com.daily.reactlibrary'
-    compileSdkVersion safeExtGet('compileSdkVersion', DEFAULT_COMPILE_SDK_VERSION)
-    buildToolsVersion safeExtGet('buildToolsVersion', DEFAULT_BUILD_TOOLS_VERSION)
-
     defaultConfig {
-        minSdkVersion safeExtGet('minSdkVersion', DEFAULT_MIN_SDK_VERSION)
-        targetSdkVersion safeExtGet('targetSdkVersion', DEFAULT_TARGET_SDK_VERSION)
         versionCode 1
-        versionName "1.0"
+        versionName '0.1.0'
     }
     lintOptions {
         abortOnError false
     }
-    compileOptions {
-        sourceCompatibility JavaVersion.VERSION_17
-        targetCompatibility JavaVersion.VERSION_17
-    }
-    kotlinOptions {
-        jvmTarget = '17'
-    }
-    packagingOptions {
-        jniLibs {
-            useLegacyPackaging false
-        }
-    }
-    sourceSets {
-        main {
-            java.srcDirs += ["${project.buildDir}/generated/source/codegen/java"]
-        }
-    }
-}
-
-repositories {
-    mavenCentral()
-    google()
-    maven {
-        url "$rootDir/../node_modules/react-native/android"
-    }
 }
 
 dependencies {
-    implementation 'com.facebook.react:react-native:+'
     implementation 'co.daily:client:0.40.0'
     implementation 'androidx.core:core:1.15.0'
 }

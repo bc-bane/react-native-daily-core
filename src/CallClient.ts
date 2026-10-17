@@ -1,11 +1,14 @@
-import {NativeEventEmitter} from 'react-native';
-import NativeDailyCallClient from './NativeDailyCallClient';
+import {
+  getDailyCallClientEventEmitter,
+  getNativeDailyCallClientModule,
+} from './ExpoDailyCallClient';
 import type {
   AvailableDevices,
   CallClientEventMap,
   CallClientEventName,
   CallState,
   ClientSettingsUpdate,
+  InputSettingsPatch,
   IceConfig,
   InputSettings,
   JoinOptions,
@@ -27,8 +30,6 @@ import type {
 
 type Handler<T> = (payload: T) => void;
 
-const emitter = new NativeEventEmitter(NativeDailyCallClient);
-
 interface NativeEvent {
   clientId: number;
   type: CallClientEventName;
@@ -49,7 +50,7 @@ const emptyPublishing = (): PublishingSettings => ({
 
 export class CallClient {
   static async create(): Promise<CallClient> {
-    const clientId = await NativeDailyCallClient.createClient();
+    const clientId = await getNativeDailyCallClientModule().createClient();
     const client = new CallClient(clientId);
     await client.seedFromNative();
     return client;
@@ -81,7 +82,7 @@ export class CallClient {
 
   private constructor(clientId: number) {
     this.clientId = clientId;
-    this.subscription = emitter.addListener(
+    this.subscription = getDailyCallClientEventEmitter().addListener(
       'DailyCallClientEvent',
       (event: NativeEvent) => {
         if (this.destroyed || event.clientId !== this.clientId) {
@@ -199,7 +200,7 @@ export class CallClient {
     this.destroyed = true;
     this.performGeneration += 1;
     this.subscription.remove();
-    NativeDailyCallClient.destroyClient(this.clientId);
+    getNativeDailyCallClientModule().destroyClient(this.clientId);
   }
 
   callConfigFor(url: string, token?: string): Promise<CallConfiguration> {
@@ -227,6 +228,10 @@ export class CallClient {
     return this.perform('setInputsEnabled', options).then(() => undefined);
   }
 
+  updateInputs(update: InputSettingsPatch): Promise<void> {
+    return this.perform('updateInputs', update).then(() => undefined);
+  }
+
   setIsPublishing(options: {
     camera?: boolean;
     microphone?: boolean;
@@ -250,7 +255,7 @@ export class CallClient {
     participantId: string,
     media: SubscriptionMediaState,
   ): Promise<void> {
-    return this.perform('setSubscriptionState', {participantId, media}).then(
+    return this.perform('setSubscriptionState', {participantId, ...media}).then(
       () => undefined,
     );
   }
@@ -277,11 +282,14 @@ export class CallClient {
   }
 
   updateRemoteParticipants(
-    updates: RemoteParticipantUpdate[],
+    updates: Array<RemoteParticipantUpdate & {id: string}>,
   ): Promise<void> {
-    return this.perform('updateRemoteParticipants', {updates}).then(
-      () => undefined,
-    );
+    const payload: Record<string, RemoteParticipantUpdate> = {};
+    for (const update of updates) {
+      const {id, ...rest} = update;
+      payload[id] = rest;
+    }
+    return this.perform('updateRemoteParticipants', payload).then(() => undefined);
   }
 
   ejectRemoteParticipants(ids: string[]): Promise<void> {
@@ -399,7 +407,7 @@ export class CallClient {
       throw new Error('CallClient has been released');
     }
     const generation = this.performGeneration;
-    const json = await NativeDailyCallClient.perform(
+    const json = await getNativeDailyCallClientModule().perform(
       this.clientId,
       action,
       JSON.stringify(payload ?? {}),

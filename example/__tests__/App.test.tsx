@@ -1,49 +1,42 @@
-/**
- * @format
- */
-
 import React from 'react';
 import ReactTestRenderer from 'react-test-renderer';
 
-jest.mock('react-native', () => {
-  const actual = jest.requireActual('react-native');
-  const NativeEventEmitter = jest.fn().mockImplementation(() => ({
-    addListener: () => ({remove: () => undefined}),
-  }));
-  return new Proxy(actual, {
-    get(target, prop, receiver) {
-      if (prop === 'NativeEventEmitter') {
-        return NativeEventEmitter;
-      }
-      return Reflect.get(target, prop, receiver);
-    },
-  });
+jest.mock('react-native-safe-area-context', () => {
+  const React = require('react');
+  const {View} = require('react-native');
+  return {
+    SafeAreaProvider: ({children}: {children?: React.ReactNode}) =>
+      React.createElement(View, null, children),
+    SafeAreaView: ({children, ...props}: {children?: React.ReactNode}) =>
+      React.createElement(View, props, children),
+    useSafeAreaInsets: () => ({top: 0, right: 0, bottom: 0, left: 0}),
+  };
 });
 
-jest.mock('../../src/DailyVideoViewNativeComponent', () => {
+jest.mock('../../src/ExpoDailyCallClient', () => {
   const React = require('react');
   const {View} = require('react-native');
   return {
     __esModule: true,
-    default: (props: object) => React.createElement(View, props),
+    DailyVideoView: (props: object) => React.createElement(View, props),
+    getNativeDailyCallClientModule: () => ({
+      createClient: () => Promise.resolve(1),
+      destroyClient: () => undefined,
+      perform: () => Promise.resolve('{}'),
+    }),
+    getDailyCallClientEventEmitter: () => ({
+      addListener: () => ({remove: () => undefined}),
+    }),
   };
 });
 
-jest.mock('../../src/NativeDailyCallClient', () => ({
-  __esModule: true,
-  default: {
-    createClient: () => 1,
-    destroyClient: () => undefined,
-    perform: () => Promise.resolve('{}'),
-    addListener: () => undefined,
-    removeListeners: () => undefined,
-  },
-}));
-
 import App from '../App';
 
-test('renders correctly', async () => {
-  await ReactTestRenderer.act(() => {
-    ReactTestRenderer.create(<App />);
+test('renders the lobby', async () => {
+  let tree: ReactTestRenderer.ReactTestRenderer;
+  await ReactTestRenderer.act(async () => {
+    tree = ReactTestRenderer.create(<App />);
   });
+  const json = JSON.stringify(tree!.toJSON());
+  expect(json).toContain('Join');
 });

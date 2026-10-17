@@ -1,8 +1,9 @@
 module.exports = {
-  preset: 'react-native',
+  preset: 'jest-expo',
   moduleNameMapper: {
     '^react-native-daily-core$': '<rootDir>/../src/index.ts',
-    '^react-native$': '<rootDir>/node_modules/react-native',
     '^react$': '<rootDir>/node_modules/react',
+    '^react/(.*)$': '<rootDir>/node_modules/react/$1',
+    '^react-native$': '<rootDir>/node_modules/react-native',
   },
 };

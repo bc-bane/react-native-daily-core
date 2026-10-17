@@ -1,3 +1,0 @@
-// Copy to Signing.local.xcconfig (gitignored) and set your Apple Development team ID.
-// Or set the team once in Xcode: DailyExample target → Signing & Capabilities.
-DEVELOPMENT_TEAM =

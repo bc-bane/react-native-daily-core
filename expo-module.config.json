@@ -1,0 +1,10 @@
+{
+  "platforms": ["apple", "android"],
+  "apple": {
+    "modules": ["DailyCallClientModule"],
+    "podspecPath": "react-native-daily-core.podspec"
+  },
+  "android": {
+    "modules": ["com.daily.reactlibrary.DailyCallClientModule"]
+  }
+}

@@ -4,7 +4,7 @@ A React Native `CallClient` for Daily, implemented on the official iOS and Andro
 
 The API follows [daily-client-ios](https://reference-ios.daily.co/documentation/daily/callclient), [daily-client-android](https://reference-android.daily.co/daily-android/co.daily/-call-client/index.html), and `daily-flutter`.
 
-This is a New Architecture library. It requires React Native 0.82 or newer.
+The native bridge uses the Expo Modules API. The app needs the `expo` package (Expo SDK 58 is what the example targets) and React Native 0.82 or newer.
 
 ## Why this library exists
 
@@ -23,9 +23,10 @@ Web apps should keep using [`daily-js`](https://docs.daily.co/reference/daily-js
 
 ## Requirements
 
-- Node >= 20.19.4 (see `.nvmrc`)
+- Node >= 22.13 (see `.nvmrc`)
+- Expo SDK with `expo-modules-core` (the example uses Expo SDK 58)
 - React Native >= 0.82
-- iOS deployment target >= 14
+- iOS deployment target >= 16.4
 - Android `minSdkVersion` >= 24
 - Android Gradle Plugin 8.5.1 or newer and NDK r28 or newer when you compile native code
 - `co.daily:client` 0.40.0 (pulled in by this package) and the `Daily` 0.40.0 CocoaPod
@@ -34,7 +35,14 @@ Web apps should keep using [`daily-js`](https://docs.daily.co/reference/daily-js
 
 ```bash
 npm install react-native-daily-core
-cd ios && pod install
+```
+
+The app must already include Expo modules. In an Expo app, add the config plugin and run prebuild (or `npx expo run:ios` / `npx expo run:android`, which prebuild for you):
+
+```json
+{
+  "plugins": ["react-native-daily-core"]
+}
 ```
 
 Add camera and microphone usage strings to `Info.plist`, plus `UIBackgroundModes` = `voip` if audio should continue in the background. On Android, the library manifest merges camera, microphone, notification, and foreground-service permissions.
@@ -194,6 +202,8 @@ The native view refreshes when participant media changes. After `release()`, det
 
 `example/` is the manual test app: join, leave, local and remote video, microphone, and camera.
 
+The example is an Expo SDK 58 app. It needs Node 22.13 or newer.
+
 ```bash
 cd example
 npm install
@@ -201,4 +211,4 @@ npm run ios
 npm run android
 ```
 
-Copy `example/daily.env.json.example` to `example/daily.env.json` and set `url` (and optional `token`). For iOS device builds, choose your Apple Development team in Xcode (**Signing & Capabilities**); that choice stays local and is not committed. The example enables [React Compiler](https://react.dev/learn/react-compiler) 1.0 via Babel (`babel-plugin-react-compiler` first in `plugins`).
+`npm run ios` and `npm run android` run `expo run`, which generates the native projects. Copy `example/daily.env.json.example` to `example/daily.env.json` and set `url` (and optional `token`). For an iOS device build, choose your Apple Development team in Xcode (**Signing & Capabilities**). That choice stays in the generated `example/ios` project and is not committed.

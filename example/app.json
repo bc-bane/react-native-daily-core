@@ -1,4 +1,26 @@
 {
-  "name": "DailyExample",
-  "displayName": "DailyExample"
+  "expo": {
+    "name": "DailyExample",
+    "slug": "daily-example",
+    "scheme": "dailyexample",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "newArchEnabled": true,
+    "ios": {
+      "bundleIdentifier": "com.dailyexample",
+      "supportsTablet": true
+    },
+    "android": {
+      "package": "com.dailyexample"
+    },
+    "plugins": [
+      "react-native-daily-core",
+      "./plugins/withScreenShare",
+      "expo-asset",
+      "expo-font"
+    ],
+    "experiments": {
+      "autolinkingModuleResolution": true
+    }
+  }
 }

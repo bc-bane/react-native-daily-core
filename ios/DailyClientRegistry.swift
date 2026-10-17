@@ -1,4 +1,5 @@
 import Daily
+import ReplayKit
 import UIKit
 
 private typealias Completion = (String?, String?) -> Void
@@ -121,8 +122,12 @@ public class DailyClientRegistry: NSObject {
   }
 
   func updateIdleTimer() {
-    let joined = boxes.values.contains { $0.client.callState == .joined }
-    UIApplication.shared.isIdleTimerDisabled = joined
+    DispatchQueue.main.async {
+      MainActor.assumeIsolated {
+        let joined = self.boxes.values.contains { $0.client.callState == .joined }
+        UIApplication.shared.isIdleTimerDisabled = joined
+      }
+    }
   }
 
   private func clearHostTracks(for clientId: Int) {
@@ -217,6 +222,8 @@ private final class CallBox: NSObject, CallClientDelegate {
       client.set(iceConfig: iceConfig(payload["iceConfig"] as? [String: Any])) { result in self.finish(result, completion) }
     case "setInputsEnabled":
       setInputs(payload, completion)
+    case "updateInputs":
+      updateInputs(payload, completion)
     case "setIsPublishing":
       setPublishing(payload, completion)
     case "setCameraTorch":
@@ -238,9 +245,9 @@ private final class CallBox: NSObject, CallClientDelegate {
     case "sendAppMessage":
       sendMessage(payload, completion)
     case "startScreenShare":
-      client.startScreenShare { result in self.finish(result, completion) }
+      presentScreenSharePicker(completion)
     case "stopScreenShare":
-      client.stopScreenShare { result in self.finish(result, completion) }
+      stopScreenShare(completion)
     case "startRecording":
       client.startRecording(streamID: streamId(payload["streamId"] as? String), forceNew: payload["forceNew"] as? Bool) { result in
         self.hop {
@@ -347,6 +354,74 @@ private final class CallBox: NSObject, CallClientDelegate {
     client.setInputsEnabled(values) { result in self.finish(result, completion) { self.snapshot() } }
   }
 
+  private func updateInputs(_ payload: [String: Any], _ completion: @escaping Completion) {
+    var cameraUpdate: Update<CameraInputSettingsUpdate>?
+    if let camera = payload["camera"] as? [String: Any] {
+      var value = CameraInputSettingsUpdate()
+      if let enabled = camera["isEnabled"] as? Bool {
+        value.isEnabled = .set(enabled)
+      }
+      if let facing = camera["facingMode"] as? String, let mode = MediaTrackFacingMode(rawValue: facing) {
+        var settings = VideoMediaTrackSettingsUpdate()
+        settings.facingMode = .set(mode)
+        value.settings = .set(settings)
+      }
+      cameraUpdate = .set(value)
+    }
+    var microphoneUpdate: Update<MicrophoneInputSettingsUpdate>?
+    if let microphone = payload["microphone"] as? [String: Any], let enabled = microphone["isEnabled"] as? Bool {
+      microphoneUpdate = .set(.enabled(enabled))
+    }
+    var screenUpdate: Update<ScreenVideoInputSettingsUpdate>?
+    if let screen = payload["screenVideo"] as? [String: Any], let enabled = screen["isEnabled"] as? Bool {
+      screenUpdate = .set(.enabled(enabled))
+    }
+    client.updateInputs(.set(InputSettingsUpdate(
+      camera: cameraUpdate,
+      microphone: microphoneUpdate,
+      screenVideo: screenUpdate
+    ))) { result in self.finish(result.map { _ in () }, completion) { self.snapshot() } }
+  }
+
+  private func presentScreenSharePicker(_ completion: @escaping Completion) {
+    hop {
+      guard let bundleId = Bundle.main.object(forInfoDictionaryKey: "DailyScreenCaptureExtensionBundleIdentifier") as? String,
+            !bundleId.isEmpty else {
+        completion(nil, "Screen share needs DailyScreenCaptureExtensionBundleIdentifier in Info.plist")
+        return
+      }
+      guard let window = keyWindow() else {
+        completion(nil, "Screen share needs a visible window")
+        return
+      }
+      let picker = RPSystemBroadcastPickerView(frame: CGRect(x: 0, y: 0, width: 44, height: 44))
+      picker.preferredExtension = bundleId
+      picker.showsMicrophoneButton = false
+      window.addSubview(picker)
+      picker.subviews.compactMap { $0 as? UIButton }.first?.sendActions(for: .touchUpInside)
+      picker.removeFromSuperview()
+      completion("{}", nil)
+    }
+  }
+
+  private func stopScreenShare(_ completion: @escaping Completion) {
+    client.updateInputs(.set(InputSettingsUpdate(screenVideo: .set(.enabled(false))))) { updateResult in
+      self.client.stopScreenShare { stopResult in
+        self.hop {
+          if case .failure(let error) = updateResult {
+            completion(nil, error.localizedDescription)
+            return
+          }
+          if case .failure(let error) = stopResult {
+            completion(nil, error.localizedDescription)
+            return
+          }
+          completion(self.snapshot(), nil)
+        }
+      }
+    }
+  }
+
   private func setPublishing(_ payload: [String: Any], _ completion: @escaping Completion) {
     var values: [OutboundMediaType: Bool] = [:]
     if let camera = payload["camera"] as? Bool { values[.camera] = camera }
@@ -417,7 +492,7 @@ private final class CallBox: NSObject, CallClientDelegate {
 
   private func sendMessage(_ payload: [String: Any], _ completion: @escaping Completion) {
     let message = (payload["message"] as? String) ?? ""
-    let data = Data(message.utf8)
+    let data = jsonData(forAppMessage: message)
     let recipient: AppMessageRecipient
     if let to = payload["to"] as? String, let id = ParticipantID(uuidString: to) {
       recipient = .participant(id)
@@ -552,7 +627,7 @@ private final class CallBox: NSObject, CallClientDelegate {
 
   nonisolated func callClient(_ callClient: CallClient, appMessageAsJson jsonData: Data, from participantID: ParticipantID) {
     hop {
-      self.emit("appMessage", ["message": String(data: jsonData, encoding: .utf8) ?? "", "from": participantID.uuidString])
+      self.emit("appMessage", ["message": appMessageText(jsonData), "from": participantID.uuidString])
     }
   }
 
@@ -701,14 +776,38 @@ private final class CallBox: NSObject, CallClientDelegate {
   nonisolated func callClientDidDetectStartOfSystemBroadcast(_ callClient: CallClient) {
     hop {
       self.emit("systemBroadcastStarted", [:])
+      self.client.updateInputs(.set(InputSettingsUpdate(screenVideo: .set(.enabled(true))))) { _ in }
     }
   }
 
   nonisolated func callClientDidDetectEndOfSystemBroadcast(_ callClient: CallClient) {
     hop {
       self.emit("systemBroadcastStopped", [:])
+      self.client.updateInputs(.set(InputSettingsUpdate(screenVideo: .set(.enabled(false))))) { _ in }
     }
   }
+}
+
+private func keyWindow() -> UIWindow? {
+  UIApplication.shared.connectedScenes
+    .compactMap { $0 as? UIWindowScene }
+    .flatMap(\.windows)
+    .first { $0.isKeyWindow }
+}
+
+private func jsonData(forAppMessage message: String) -> Data {
+  if let data = message.data(using: .utf8),
+     (try? JSONSerialization.jsonObject(with: data)) != nil {
+    return data
+  }
+  return (try? JSONSerialization.data(withJSONObject: message, options: .fragmentsAllowed)) ?? Data("\"\"".utf8)
+}
+
+private func appMessageText(_ data: Data) -> String {
+  if let text = try? JSONSerialization.jsonObject(with: data) as? String {
+    return text
+  }
+  return String(data: data, encoding: .utf8) ?? ""
 }
 
 private func callConfigJson(_ config: CallConfiguration) -> String {
@@ -753,6 +852,7 @@ private func recordingModeName(_ mode: RecordingMode) -> String {
   case .rawTracks: return "raw-tracks"
   case .local: return "local"
   case .off: return "off"
+  @unknown default: return "off"
   }
 }
 
@@ -876,6 +976,7 @@ private func mediaState(_ state: MediaState) -> String {
   case .loading: return "loading"
   case .playable: return "playable"
   case .interrupted: return "interrupted"
+  @unknown default: return "off"
   }
 }
 

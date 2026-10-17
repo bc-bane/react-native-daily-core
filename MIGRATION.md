@@ -20,7 +20,7 @@ npm uninstall @daily-co/react-native-daily-js @daily-co/react-native-webrtc @rea
 npm install react-native-daily-core
 ```
 
-Peer dependencies are `react` >= 19 and `react-native` >= 0.82.
+Peer dependencies are `expo`, `expo-modules-core`, `react` >= 19, and `react-native` >= 0.82. The example app uses Expo SDK 58 (React Native 0.88).
 
 ### iOS Podfile
 
@@ -30,10 +30,10 @@ The old install set the app platform to iOS 12 because of `react-native-webrtc`,
 platform :ios, '12.0'
 ```
 
-The Daily iOS SDK and this package require iOS 14. Set the app platform to at least 14:
+The Daily iOS SDK supports iOS 14. This package’s podspec requires iOS 16.4, which matches Expo SDK 58. Set the app platform to at least 16.4:
 
 ```ruby
-platform :ios, '14.0'
+platform :ios, '16.4'
 ```
 
 Do not add `pod 'Daily'` or `pod 'DailySystemBroadcast'` in the app Podfile. This package's podspec depends on both at 0.40.0, and autolinking pulls the pod in. Run `pod install` after upgrading.
@@ -46,11 +46,35 @@ Remove the `ReactNativeDailyJSScreenShareExtension` target and the setup from [r
 
 `minSdkVersion` stays 24. The library manifest merges camera, microphone, wake lock, notifications, and the ongoing-call foreground service (`DailyOngoingMeetingForegroundService`, including `mediaProjection`). You can delete the copy of that `<service>` and those `<uses-permission>` entries from the app manifest if they only existed for this package.
 
-React Native 0.82 has no legacy architecture switch. `newArchEnabled` stays true.
+React Native 0.82 and newer have no legacy architecture switch.
 
-### Expo
+## Expo modules
 
-`@daily-co/config-plugin-rn-daily-js` configured the WebRTC stack and the old screen-share extension. Do not use it with this package. The config plugin shipped here is `app.plugin.js`. It adds the camera and microphone usage strings, the iOS `voip` background mode, and the Android call permissions. The app still has to be on an Expo SDK that ships React Native 0.82 or newer.
+`CallClient` and `VideoView` are an Expo module named `DailyCallClient`. JavaScript loads them with `requireNativeModule` and `requireNativeViewManager` from `expo-modules-core`. The app needs the `expo` package so Expo autolinking can include the native module. A bare React Native app installs Expo modules first ([Install Expo modules in an existing React Native project](https://docs.expo.dev/bare/installing-expo-modules/)), then this package.
+
+Add the config plugin in `app.json` (or `app.config.js`):
+
+```json
+{
+  "plugins": ["react-native-daily-core"]
+}
+```
+
+Then prebuild or run `npx expo run:ios` / `npx expo run:android`.
+
+### Monorepo / local package install
+
+With **pnpm**, use a **`link:`** dependency to the library root so `ios/`, `android/`, and `expo-module.config.json` are present:
+
+```json
+"react-native-daily-core": "link:../../../AltCode/react-native-daily-js"
+```
+
+Add the library path to Metro **`watchFolders`** when it lives outside the app repo. The example sets `experiments.autolinkingModuleResolution` so Metro resolves this package from the app, not from a second copy of `react-native` inside the library.
+
+### Expo config plugin (managed / prebuild)
+
+`@daily-co/config-plugin-rn-daily-js` configured the WebRTC stack and the old screen-share extension. Do not use it with this package. The config plugin shipped here is `app.plugin.js`. It adds the camera and microphone usage strings, the iOS `voip` background mode, and the Android call permissions.
 
 ## What you import
 
@@ -238,3 +262,27 @@ These daily-js methods are not on the iOS or Android `CallClient` in SDK 0.40.0,
 - iframe and prebuilt methods (`load`, `join` with a Daily Prebuilt iframe, `startCamera` as a prejoin step)
 
 `reactNativeConfig.disableAutoDeviceManagement` is not reimplemented. The native SDK owns the audio session and does not expose that switch.
+
+## Pre-merge QA (mobile video call)
+
+Run on **iOS and Android** for **Tinker** and **TechTalk** before merging a `react-native-daily-core` upgrade. Web (`@daily-co/daily-js`) is unchanged.
+
+### Build / install smoke
+
+1. `pnpm install` at monorepo root (use **`link:`** to the library so the Expo module sources are present).
+2. Confirm the app config lists the `react-native-daily-core` plugin, then prebuild or run the Expo native build.
+3. Android: clean rebuild after a dependency change.
+
+### Runtime matrix
+
+| Area | What to verify |
+| --- | --- |
+| Join | Enter a scheduled or matched call; remote and local video render. |
+| Audio / video | Mute and unmute mic; turn camera off and on; flip camera (where supported). |
+| Chat | Send and receive in-call app messages; remote participant list updates. |
+| Leave | End call from in-call UI; no crash; `leave()` + `release()` cleanup. |
+| Home tab | After leave, no stale “rejoin” state; active call batch id clears; can start a new request. |
+| Background | Optional: brief background/foreground during call; AV recovers or fails gracefully. |
+| TechTalk | Same join/leave path via shared `VideoCall` layout. |
+
+If **`Cannot find native module 'DailyCallClient'`** appears at runtime, re-check the [Expo modules](#expo-modules) section and run a clean prebuild.

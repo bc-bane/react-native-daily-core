@@ -16,8 +16,10 @@ const native = {
   ),
 };
 
-jest.mock('react-native', () => ({
-  NativeEventEmitter: jest.fn().mockImplementation(() => ({
+jest.mock('./ExpoDailyCallClient', () => ({
+  __esModule: true,
+  getNativeDailyCallClientModule: () => native,
+  getDailyCallClientEventEmitter: () => ({
     addListener: (_name: string, handler: (event: NativeEvent) => void) => {
       listeners.push(handler);
       return {
@@ -29,12 +31,7 @@ jest.mock('react-native', () => ({
         },
       };
     },
-  })),
-}));
-
-jest.mock('./NativeDailyCallClient', () => ({
-  __esModule: true,
-  default: native,
+  }),
 }));
 
 import {CallClient} from './CallClient';

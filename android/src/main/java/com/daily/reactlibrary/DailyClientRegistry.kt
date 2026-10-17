@@ -35,9 +35,12 @@ import co.daily.model.transcription.TranscriptionMessageData
 import co.daily.model.transcription.TranscriptionStatus
 import co.daily.settings.CameraInputSettingsUpdate
 import co.daily.settings.ClientSettingsUpdate
+import co.daily.settings.FacingModeUpdate
 import co.daily.settings.InputSettings
 import co.daily.settings.InputSettingsUpdate
 import co.daily.settings.MicrophoneInputSettingsUpdate
+import co.daily.settings.ScreenVideoInputSettingsUpdate
+import co.daily.settings.VideoMediaTrackSettingsUpdate
 import co.daily.settings.PublishingSettings
 import co.daily.settings.PublishingSettingsUpdate
 import co.daily.settings.subscription.MediaSubscriptionSettings
@@ -125,13 +128,13 @@ internal object DailyClientRegistry {
   }
 
   fun syncOngoingCall() {
-    val context = DailyCallClientModule.sharedContext ?: return
+    val context = DailyRuntime.applicationContextOrNull() ?: return
     val joined = clients.values.any { it.client.callState() == CallState.joined }
     if (!joined) {
       DailyOngoingMeetingForegroundService.stop(context)
       return
     }
-    val activity = context.currentActivity ?: return
+    val activity = DailyRuntime.currentActivity() ?: return
     DailyOngoingMeetingForegroundService.start(
       activity.javaClass,
       "In a call",
@@ -141,11 +144,7 @@ internal object DailyClientRegistry {
     )
   }
 
-  private fun appContext(): Context {
-    val context = DailyCallClientModule.sharedContext
-      ?: throw IllegalStateException("DailyCallClientModule is not initialized")
-    return context.applicationContext
-  }
+  private fun appContext(): Context = DailyRuntime.applicationContext()
 
 }
 
@@ -165,6 +164,7 @@ private class ClientBox(
         camera = payload.optBooleanOrNull("camera"),
         microphone = payload.optBooleanOrNull("microphone"),
       ) { finish(it.error?.msg, callback) { snapshot() } }
+      "updateInputs" -> updateInputs(payload, callback)
       "setIsPublishing" -> client.setIsPublishing(
         camera = payload.optBooleanOrNull("camera"),
         microphone = payload.optBooleanOrNull("microphone"),
@@ -182,7 +182,7 @@ private class ClientBox(
       "ejectRemoteParticipants" -> client.ejectRemoteParticipants(idList(payload.getJSONArray("ids"))) { finish(it.error?.msg, callback) }
       "sendAppMessage" -> client.sendAppMessage(payload.getString("message"), recipient(payload)) { finish(it.error?.msg, callback) }
       "stopScreenShare" -> client.stopScreenShare {
-        DailyCallClientModule.sharedContext?.applicationContext?.let { ctx ->
+        DailyRuntime.applicationContextOrNull()?.let { ctx ->
           DailyScreenShareForegroundService.stop(ctx)
         }
         finish(it.error?.msg, callback)
@@ -234,6 +234,34 @@ private class ClientBox(
 
   fun startScreenShare(intent: Intent, callback: (String?, String?) -> Unit) {
     client.startScreenShare(intent) { finish(it.error?.msg, callback) }
+  }
+
+  private fun updateInputs(payload: JSONObject, callback: (String?, String?) -> Unit) {
+    val camera = payload.optJSONObject("camera")?.let { cameraUpdate(it) }
+    val microphone = payload.optJSONObject("microphone")?.takeIf { it.has("isEnabled") }?.let {
+      MicrophoneInputSettingsUpdate.Builder().withEnabled(it.getBoolean("isEnabled")).build()
+    }
+    val screenVideo = payload.optJSONObject("screenVideo")?.takeIf { it.has("isEnabled") }?.let {
+      ScreenVideoInputSettingsUpdate.Builder().withEnabled(it.getBoolean("isEnabled")).build()
+    }
+    client.updateInputs(
+      InputSettingsUpdate(camera = camera, microphone = microphone, screenVideo = screenVideo),
+    ) { finish(it.error?.msg, callback) { snapshot() } }
+  }
+
+  private fun cameraUpdate(camera: JSONObject): CameraInputSettingsUpdate? {
+    val builder = CameraInputSettingsUpdate.Builder()
+    var changed = false
+    if (camera.has("isEnabled")) {
+      builder.withEnabled(camera.getBoolean("isEnabled"))
+      changed = true
+    }
+    camera.optStringOrNull("facingMode")?.let { facing ->
+      val mode = if (facing == "environment") FacingModeUpdate.environment else FacingModeUpdate.user
+      builder.withSettings(VideoMediaTrackSettingsUpdate.Builder().withFacingMode(mode).build())
+      changed = true
+    }
+    return if (changed) builder.build() else null
   }
 
   private fun join(payload: JSONObject, callback: (String?, String?) -> Unit) {
@@ -680,15 +708,15 @@ private fun JSONObject.optBooleanOrNull(key: String): Boolean? {
 
 internal fun startScreenShareFromActivity(activity: Activity, clientId: Int, callback: (String?, String?) -> Unit) {
   DailyClientRegistry.postToMain {
-    val superseded = DailyCallClientModule.pendingScreenShare
+    val superseded = DailyRuntime.pendingScreenShare
     if (superseded != null) {
       superseded.callback(null, "Superseded by another screen share request")
     }
-    DailyCallClientModule.pendingScreenShare = PendingScreenShare(clientId, callback)
+    DailyRuntime.pendingScreenShare = PendingScreenShare(clientId, callback)
     val manager = activity.getSystemService(Context.MEDIA_PROJECTION_SERVICE) as MediaProjectionManager
     activity.startActivityForResult(
       manager.createScreenCaptureIntent(),
-      DailyCallClientModule.SCREEN_SHARE_REQUEST,
+      DailyRuntime.SCREEN_SHARE_REQUEST,
     )
   }
 }

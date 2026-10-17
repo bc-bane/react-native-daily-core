@@ -2,15 +2,16 @@
   "compilerOptions": {
     "target": "es2019",
     "module": "commonjs",
+    "rootDir": "./src",
     "outDir": "./dist",
-    "lib": ["es2021"],
+    "lib": ["ES2021"],
     "strict": true,
     "jsx": "react-native",
     "esModuleInterop": true,
     "allowSyntheticDefaultImports": true,
     "declaration": true,
     "skipLibCheck": true,
-    "types": ["react", "react-native"]
+    "types": ["react"]
   },
   "include": ["src"],
   "exclude": ["src/**/*.test.ts"]
