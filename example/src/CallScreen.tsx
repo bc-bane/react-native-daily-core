@@ -39,7 +39,7 @@ export function CallScreen({
   const [network, setNetwork] = useState(client.networkStats());
   const [microphoneOn, setMicrophoneOn] = useState(client.inputs().microphone.isEnabled);
   const [cameraOn, setCameraOn] = useState(client.inputs().camera.isEnabled);
-  const [screenSharing, setScreenSharing] = useState(client.publishing().screenVideo.isPublishing);
+  const screenSharing = local?.media?.screenVideo.state === 'playable';
   const [messages, setMessages] = useState<ChatLine[]>([]);
   const [unread, setUnread] = useState(false);
   const [caption, setCaption] = useState<string | null>(null);
@@ -69,7 +69,7 @@ export function CallScreen({
   }, [client, status]);
 
   useEffect(() => {
-    const onError = (event: {message: string}) => setBanner(event.message);
+    const onError = (event: {message: string}) => setBanner(dailyMessage(event.message));
     const onActive = (event: {participant: Participant | null}) => {
       setActiveSpeakerId(event.participant?.id ?? null);
     };
@@ -90,10 +90,6 @@ export function CallScreen({
     }) => {
       setMicrophoneOn(event.microphone.isEnabled);
       setCameraOn(event.camera.isEnabled);
-      setScreenSharing(event.screenVideo.isEnabled || client.publishing().screenVideo.isPublishing);
-    };
-    const onPublishing = (event: {screenVideo: {isPublishing: boolean}}) => {
-      setScreenSharing(event.screenVideo.isPublishing || client.inputs().screenVideo.isEnabled);
     };
     const onDevices = () => setDevices(audioOutputs(client));
     const onMessage = (event: {message: string; from: string}) => {
@@ -122,13 +118,13 @@ export function CallScreen({
       setRecording(false);
       setCloudStatus('Recording stopped');
     };
-    const onRecordingError = (event: {message: string}) => setCloudStatus(event.message);
+    const onRecordingError = (event: {message: string}) => setCloudStatus(dailyMessage(event.message));
     const onLiveStarted = (event: {streamId: string}) => {
       setStreaming(true);
       setStreamId(event.streamId);
     };
     const onLiveStopped = () => setStreaming(false);
-    const onLiveError = (event: {message: string}) => setBanner(event.message);
+    const onLiveError = (event: {message: string}) => setCloudStatus(dailyMessage(event.message));
     const onTranscriptionStarted = () => {
       setTranscribing(true);
       setCloudStatus('Transcription on');
@@ -137,13 +133,12 @@ export function CallScreen({
       setTranscribing(false);
       setCloudStatus('Transcription stopped');
     };
-    const onTranscriptionError = (event: {message: string}) => setCloudStatus(event.message);
+    const onTranscriptionError = (event: {message: string}) => setCloudStatus(dailyMessage(event.message));
     client.on('error', onError);
     client.on('activeSpeakerChanged', onActive);
     client.on('localAudioLevel', onLocalLevel);
     client.on('remoteParticipantsAudioLevel', onRemoteLevel);
     client.on('inputsUpdated', onInputs);
-    client.on('publishingUpdated', onPublishing);
     client.on('availableDevicesUpdated', onDevices);
     client.on('networkStatsUpdated', setNetwork);
     client.on('appMessage', onMessage);
@@ -164,7 +159,6 @@ export function CallScreen({
       client.off('localAudioLevel', onLocalLevel);
       client.off('remoteParticipantsAudioLevel', onRemoteLevel);
       client.off('inputsUpdated', onInputs);
-      client.off('publishingUpdated', onPublishing);
       client.off('availableDevicesUpdated', onDevices);
       client.off('networkStatsUpdated', setNetwork);
       client.off('appMessage', onMessage);
@@ -200,7 +194,7 @@ export function CallScreen({
     try {
       await action();
     } catch (caught) {
-      setBanner(caught instanceof Error ? caught.message : String(caught));
+      setBanner(dailyMessage(caught instanceof Error ? caught.message : String(caught)));
     }
   }
 
@@ -232,10 +226,28 @@ export function CallScreen({
         screenSharing={screenSharing}
         chatUnread={unread && sheet !== 'chat'}
         onToggleMicrophone={() => {
-          void run(() => client.setInputsEnabled({microphone: !microphoneOn}));
+          const next = !microphoneOn;
+          setMicrophoneOn(next);
+          void run(async () => {
+            try {
+              await client.updateInputs({microphone: {isEnabled: next}});
+            } catch (caught) {
+              setMicrophoneOn(!next);
+              throw caught;
+            }
+          });
         }}
         onToggleCamera={() => {
-          void run(() => client.setInputsEnabled({camera: !cameraOn}));
+          const next = !cameraOn;
+          setCameraOn(next);
+          void run(async () => {
+            try {
+              await client.updateInputs({camera: {isEnabled: next}});
+            } catch (caught) {
+              setCameraOn(!next);
+              throw caught;
+            }
+          });
         }}
         onToggleScreenShare={() => {
           void run(() => (screenSharing ? client.stopScreenShare() : client.startScreenShare()));
@@ -328,7 +340,7 @@ export function CallScreen({
                 }
               }
             } catch (caught) {
-              setCloudStatus(caught instanceof Error ? caught.message : String(caught));
+              setCloudStatus(dailyMessage(caught instanceof Error ? caught.message : String(caught)));
             }
           })();
         }}
@@ -342,19 +354,33 @@ export function CallScreen({
                 await client.startTranscription();
               }
             } catch (caught) {
-              setCloudStatus(caught instanceof Error ? caught.message : String(caught));
+              setCloudStatus(dailyMessage(caught instanceof Error ? caught.message : String(caught)));
             }
           })();
         }}
         onStartLiveStream={rtmpUrl => {
           if (!rtmpUrl) {
-            setBanner('Enter an RTMP URL to start a live stream.');
+            setCloudStatus('Enter an RTMP URL to start a live stream.');
             return;
           }
-          void run(() => client.startLiveStream({rtmpUrls: [rtmpUrl]}));
+          setCloudStatus('Starting live stream…');
+          void (async () => {
+            try {
+              await client.startLiveStream({rtmpUrls: [rtmpUrl]});
+            } catch (caught) {
+              setCloudStatus(dailyMessage(caught instanceof Error ? caught.message : String(caught)));
+            }
+          })();
         }}
         onStopLiveStream={() => {
-          void run(() => client.stopLiveStream(streamId));
+          setCloudStatus('Stopping live stream…');
+          void (async () => {
+            try {
+              await client.stopLiveStream(streamId);
+            } catch (caught) {
+              setCloudStatus(dailyMessage(caught instanceof Error ? caught.message : String(caught)));
+            }
+          })();
         }}
         onMuteSelected={() => {
           if (!selected) {
@@ -390,6 +416,26 @@ export function CallScreen({
       ) : null}
     </SafeAreaView>
   );
+}
+
+function dailyMessage(raw: string): string {
+  const text = raw
+    .replace(/^Error handling \w+:\s*/, '')
+    .replace(/request\(Daily\.RequestError\(message:\s*Optional\("([\s\S]*)"\)\)\)/, '$1');
+  if (text.includes('UserMustBeAdmin')) {
+    return 'Only an admin can do that in this room.';
+  }
+  if (text.includes('RecordingNotEnabled')) {
+    return 'Recording is not turned on for this room.';
+  }
+  if (text.includes('TranscriptionNotEnabled')) {
+    return 'Transcription is not turned on for this room.';
+  }
+  const leaf = text.match(/([A-Za-z][A-Za-z0-9]+)\)*$/);
+  if (leaf && leaf[1] !== text.trim()) {
+    return leaf[1].replace(/([a-z])([A-Z])/g, '$1 $2');
+  }
+  return text;
 }
 
 function audioOutputs(client: CallClient): MediaDeviceInfo[] {

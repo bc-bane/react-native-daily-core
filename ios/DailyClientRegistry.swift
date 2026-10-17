@@ -15,6 +15,8 @@ public class DailyVideoHost: UIView {
     super.init(frame: frame)
     videoView.autoresizingMask = [.flexibleWidth, .flexibleHeight]
     videoView.frame = bounds
+    videoView.isUserInteractionEnabled = false
+    isUserInteractionEnabled = false
     addSubview(videoView)
     DailyClientRegistry.shared.track(host: self)
   }
@@ -58,6 +60,11 @@ public class DailyVideoHost: UIView {
   public override func layoutSubviews() {
     super.layoutSubviews()
     videoView.frame = bounds
+    videoView.isUserInteractionEnabled = false
+  }
+
+  public override func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {
+    nil
   }
 }
 
@@ -253,7 +260,7 @@ private final class CallBox: NSObject, CallClientDelegate {
         self.hop {
           switch result {
           case .success(let id): completion("{\"streamId\":\"\(id.uuidString)\"}", nil)
-          case .failure(let error): completion(nil, error.localizedDescription)
+          case .failure(let error): completion(nil, describe(error))
           }
         }
       }
@@ -311,7 +318,7 @@ private final class CallBox: NSObject, CallClientDelegate {
           DailyClientRegistry.shared.updateIdleTimer()
           completion(self.snapshot(), nil)
         case .failure(let error):
-          completion(nil, error.localizedDescription)
+          completion(nil, describe(error))
         }
       }
     }
@@ -341,7 +348,7 @@ private final class CallBox: NSObject, CallClientDelegate {
       self.hop {
         switch result {
         case .success(let config): completion(callConfigJson(config), nil)
-        case .failure(let error): completion(nil, error.localizedDescription)
+        case .failure(let error): completion(nil, describe(error))
         }
       }
     }
@@ -405,18 +412,13 @@ private final class CallBox: NSObject, CallClientDelegate {
   }
 
   private func stopScreenShare(_ completion: @escaping Completion) {
-    client.updateInputs(.set(InputSettingsUpdate(screenVideo: .set(.enabled(false))))) { updateResult in
-      self.client.stopScreenShare { stopResult in
-        self.hop {
-          if case .failure(let error) = updateResult {
-            completion(nil, error.localizedDescription)
-            return
-          }
-          if case .failure(let error) = stopResult {
-            completion(nil, error.localizedDescription)
-            return
-          }
+    client.updateInputs(.set(InputSettingsUpdate(screenVideo: .set(.enabled(false))))) { result in
+      self.hop {
+        switch result {
+        case .success:
           completion(self.snapshot(), nil)
+        case .failure(let error):
+          completion(nil, describe(error))
         }
       }
     }
@@ -514,7 +516,7 @@ private final class CallBox: NSObject, CallClientDelegate {
       self.hop {
         switch result {
         case .success(let id): completion("{\"streamId\":\"\(id.uuidString)\"}", nil)
-        case .failure(let error): completion(nil, error.localizedDescription)
+        case .failure(let error): completion(nil, describe(error))
         }
       }
     }
@@ -542,7 +544,7 @@ private final class CallBox: NSObject, CallClientDelegate {
     hop {
       switch result {
       case .success: completion(success(), nil)
-      case .failure(let error): completion(nil, error.localizedDescription)
+      case .failure(let error): completion(nil, describe(error))
       }
     }
   }
@@ -621,7 +623,7 @@ private final class CallBox: NSObject, CallClientDelegate {
 
   nonisolated func callClient(_ callClient: CallClient, error: CallClientError) {
     hop {
-      self.emit("error", ["message": error.localizedDescription])
+      self.emit("error", ["message": describe(error)])
     }
   }
 
@@ -785,6 +787,31 @@ private final class CallBox: NSObject, CallClientDelegate {
       self.emit("systemBroadcastStopped", [:])
       self.client.updateInputs(.set(InputSettingsUpdate(screenVideo: .set(.enabled(false))))) { _ in }
     }
+  }
+}
+
+private func describe(_ error: CallClientError) -> String {
+  switch error {
+  case .unknown(let message):
+    if let message, !message.isEmpty {
+      return message
+    }
+    return "Unknown Daily error"
+  case .core(let inner):
+    if let nested = inner as? CallClientError {
+      return describe(nested)
+    }
+    let nsError = inner as NSError
+    if let reason = nsError.localizedFailureReason, !reason.isEmpty {
+      return reason
+    }
+    let description = nsError.localizedDescription
+    if !description.contains("CallClientError error") {
+      return description
+    }
+    return String(describing: inner)
+  @unknown default:
+    return String(describing: error)
   }
 }
 

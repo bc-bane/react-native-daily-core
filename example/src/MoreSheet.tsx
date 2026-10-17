@@ -99,7 +99,7 @@ function Action({
 
 const styles = StyleSheet.create({
   label: {color: call.text, fontWeight: '600'},
-  status: {color: call.muted},
+  status: {color: call.text},
   input: {
     color: call.text,
     borderWidth: 1,

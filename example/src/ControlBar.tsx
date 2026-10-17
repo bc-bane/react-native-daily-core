@@ -94,6 +94,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 8,
     paddingTop: 8,
     gap: 4,
+    zIndex: 2,
   },
   item: {alignItems: 'center', flex: 1, gap: 4},
   button: {

@@ -95,8 +95,13 @@ public class DailyVideoExpoView: ExpoView {
   public required init(appContext: AppContext? = nil) {
     super.init(appContext: appContext)
     clipsToBounds = true
+    isUserInteractionEnabled = false
     host.autoresizingMask = [.flexibleWidth, .flexibleHeight]
     addSubview(host)
+  }
+
+  public override func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {
+    nil
   }
 
   public override func layoutSubviews() {

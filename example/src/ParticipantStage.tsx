@@ -96,7 +96,7 @@ function Tile({
           participantId={participant.id}
           videoSource={screenOn ? 'screenVideo' : 'camera'}
           mirror={Boolean(mirror && participant.info.isLocal && !screenOn)}
-          objectFit="cover"
+          objectFit={screenOn ? 'contain' : 'cover'}
           style={styles.video}
         />
       )}
@@ -109,7 +109,7 @@ function Tile({
 }
 
 const styles = StyleSheet.create({
-  stage: {flex: 1},
+  stage: {flex: 1, overflow: 'hidden', zIndex: 0},
   waiting: {flex: 1, alignItems: 'center', justifyContent: 'center'},
   waitingText: {color: call.muted, fontSize: 16},
   tile: {

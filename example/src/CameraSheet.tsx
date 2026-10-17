@@ -72,11 +72,11 @@ export function CameraSheet({
       </View>
       <Text style={styles.label}>Audio output</Text>
       {devices.length === 0 ? <Text style={styles.muted}>No devices reported yet.</Text> : null}
-      {devices.map(device => {
+      {devices.map((device, index) => {
         const selected = device.deviceId === selectedDeviceId;
         return (
           <Pressable
-            key={device.deviceId}
+            key={`${device.kind}:${device.deviceId}:${index}`}
             onPress={() => onSelectDevice(device.deviceId)}
             style={[styles.device, selected && styles.deviceSelected]}>
             <Text style={styles.deviceLabel}>{device.label}</Text>
