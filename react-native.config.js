@@ -1,8 +1,11 @@
 module.exports = {
   dependency: {
     platforms: {
-      android: null,
-      ios: null,
+      android: {
+        packageImportPath: 'import com.daily.reactlibrary.DailyCallClientPackage;',
+        packageInstance: 'new DailyCallClientPackage()',
+      },
+      ios: {},
     },
   },
 };

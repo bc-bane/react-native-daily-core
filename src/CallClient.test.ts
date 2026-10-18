@@ -16,22 +16,20 @@ const native = {
   ),
 };
 
-jest.mock('./ExpoDailyCallClient', () => ({
+jest.mock('./NitroDailyCallClient', () => ({
   __esModule: true,
   getNativeDailyCallClientModule: () => native,
-  getDailyCallClientEventEmitter: () => ({
-    addListener: (_name: string, handler: (event: NativeEvent) => void) => {
-      listeners.push(handler);
-      return {
-        remove: () => {
-          const index = listeners.indexOf(handler);
-          if (index >= 0) {
-            listeners.splice(index, 1);
-          }
-        },
-      };
-    },
-  }),
+  subscribeDailyCallClientEvents: (handler: (event: NativeEvent) => void) => {
+    listeners.push(handler);
+    return {
+      remove: () => {
+        const index = listeners.indexOf(handler);
+        if (index >= 0) {
+          listeners.splice(index, 1);
+        }
+      },
+    };
+  },
 }));
 
 import {CallClient} from './CallClient';

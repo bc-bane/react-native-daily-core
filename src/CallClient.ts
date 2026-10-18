@@ -1,7 +1,7 @@
 import {
-  getDailyCallClientEventEmitter,
   getNativeDailyCallClientModule,
-} from './ExpoDailyCallClient';
+  subscribeDailyCallClientEvents,
+} from './NitroDailyCallClient';
 import type {
   AvailableDevices,
   CallClientEventMap,
@@ -82,17 +82,15 @@ export class CallClient {
 
   private constructor(clientId: number) {
     this.clientId = clientId;
-    this.subscription = getDailyCallClientEventEmitter().addListener(
-      'DailyCallClientEvent',
-      (event: NativeEvent) => {
-        if (this.destroyed || event.clientId !== this.clientId) {
-          return;
-        }
-        const payload = event.payloadJson ? JSON.parse(event.payloadJson) : {};
-        this.applyEvent(event.type, payload);
-        this.emit(event.type, payload);
-      },
-    );
+    this.subscription = subscribeDailyCallClientEvents(event => {
+      if (this.destroyed || event.clientId !== this.clientId) {
+        return;
+      }
+      const nativeEvent = event as NativeEvent;
+      const payload = nativeEvent.payloadJson ? JSON.parse(nativeEvent.payloadJson) : {};
+      this.applyEvent(nativeEvent.type, payload);
+      this.emit(nativeEvent.type, payload);
+    });
   }
 
   get id(): number {

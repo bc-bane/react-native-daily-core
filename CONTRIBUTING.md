@@ -58,3 +58,7 @@ All issues labeled `good-first-issue` are up for grabs. If you'd like to tackle 
 - If it's been a minute or if you haven't yet cloned, forked, or branched a repository, GitHub has some [docs to help](https://docs.github.com/en/github/collaborating-with-issues-and-pull-requests).
 - When creating commit messages and pull request titles, please follow the [conventional commits](https://www.conventionalcommits.org/en/v1.0.0/) standard.
 
+### Native specs (Nitro)
+
+Hybrid Object specs live in `src/specs/*.nitro.ts`. After changing a spec, run `npm run nitrogen` (Node >= 22.13) and commit the updated `nitrogen/generated/` output.
+

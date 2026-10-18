@@ -1,23 +1,125 @@
-plugins {
-    id 'com.android.library'
-    id 'expo-module-gradle-plugin'
+buildscript {
+  repositories {
+    google()
+    mavenCentral()
+  }
 }
 
-group = 'com.daily.reactlibrary'
-version = '0.1.0'
+def reactNativeArchitectures() {
+  def value = rootProject.getProperties().get("reactNativeArchitectures")
+  return value ? value.split(",") : ["armeabi-v7a", "x86", "x86_64", "arm64-v8a"]
+}
+
+apply plugin: "com.android.library"
+apply plugin: "org.jetbrains.kotlin.android"
+apply plugin: "com.facebook.react"
+apply from: "../nitrogen/generated/android/ReactNativeDailyCore+autolinking.gradle"
+apply from: "./fix-prefab.gradle"
+
+def getExtOrDefault(name) {
+  return rootProject.ext.has(name) ? rootProject.ext.get(name) : project.properties["ReactNativeDailyCore_" + name]
+}
+
+def getExtOrIntegerDefault(name) {
+  return rootProject.ext.has(name) ? rootProject.ext.get(name) : (project.properties["ReactNativeDailyCore_" + name]).toInteger()
+}
 
 android {
-    namespace 'com.daily.reactlibrary'
-    defaultConfig {
-        versionCode 1
-        versionName '0.1.0'
+  namespace "com.daily.reactlibrary"
+
+  ndkVersion getExtOrDefault("ndkVersion")
+  compileSdkVersion getExtOrIntegerDefault("compileSdkVersion")
+
+  defaultConfig {
+    minSdkVersion getExtOrIntegerDefault("minSdkVersion")
+    targetSdkVersion getExtOrIntegerDefault("targetSdkVersion")
+    buildConfigField "boolean", "IS_NEW_ARCHITECTURE_ENABLED", "true"
+
+    externalNativeBuild {
+      cmake {
+        cppFlags "-frtti -fexceptions -Wall -Wextra -fstack-protector-all"
+        arguments "-DANDROID_STL=c++_shared", "-DANDROID_SUPPORT_FLEXIBLE_PAGE_SIZES=ON"
+        abiFilters(*reactNativeArchitectures())
+
+        buildTypes {
+          debug {
+            cppFlags "-O1 -g"
+          }
+          release {
+            cppFlags "-O2"
+          }
+        }
+      }
     }
-    lintOptions {
-        abortOnError false
+  }
+
+  externalNativeBuild {
+    cmake {
+      path "CMakeLists.txt"
     }
+  }
+
+  packagingOptions {
+    excludes = [
+      "META-INF",
+      "META-INF/**",
+      "**/libc++_shared.so",
+      "**/libNitroModules.so",
+      "**/libfbjni.so",
+      "**/libjsi.so",
+      "**/libfolly_json.so",
+      "**/libfolly_runtime.so",
+      "**/libglog.so",
+      "**/libhermes.so",
+      "**/libhermes-executor-debug.so",
+      "**/libhermes_executor.so",
+      "**/libreactnative.so",
+      "**/libreactnativejni.so",
+      "**/libturbomodulejsijni.so",
+      "**/libreact_nativemodule_core.so",
+      "**/libjscexecutor.so",
+    ]
+  }
+
+  buildFeatures {
+    buildConfig true
+    prefab true
+  }
+
+  buildTypes {
+    release {
+      minifyEnabled false
+    }
+  }
+
+  lintOptions {
+    abortOnError false
+    disable "GradleCompatible"
+  }
+
+  compileOptions {
+    sourceCompatibility JavaVersion.VERSION_1_8
+    targetCompatibility JavaVersion.VERSION_1_8
+  }
+
+  sourceSets {
+    main {
+      java.srcDirs += [
+        "src/main/java",
+        "${project.buildDir}/generated/source/codegen/java",
+      ]
+    }
+  }
+}
+
+repositories {
+  mavenCentral()
+  google()
 }
 
 dependencies {
-    implementation 'co.daily:client:0.40.0'
-    implementation 'androidx.core:core:1.15.0'
+  implementation "com.facebook.react:react-android"
+  implementation "co.daily:client:0.40.0"
+  implementation "androidx.core:core:1.15.0"
+  implementation project(":react-native-nitro-modules")
 }

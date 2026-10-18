@@ -1,4 +1,12 @@
-const {withInfoPlist, withAndroidManifest, createRunOncePlugin} = require('@expo/config-plugins');
+function loadConfigPlugins() {
+  try {
+    return require('@expo/config-plugins');
+  } catch (error) {
+    return require(require.resolve('@expo/config-plugins', {paths: [process.cwd()]}));
+  }
+}
+
+const {withInfoPlist, withAndroidManifest, createRunOncePlugin} = loadConfigPlugins();
 
 function withDailyIos(config) {
   return withInfoPlist(config, config => {

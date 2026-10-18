@@ -1,0 +1,14 @@
+{
+  "uiViewClassName": "DailyVideoView",
+  "supportsRawText": false,
+  "bubblingEventTypes": {},
+  "directEventTypes": {},
+  "validAttributes": {
+    "clientId": true,
+    "participantId": true,
+    "videoSource": true,
+    "mirror": true,
+    "objectFit": true,
+    "hybridRef": true
+  }
+}

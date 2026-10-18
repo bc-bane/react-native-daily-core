@@ -71,11 +71,43 @@ internal fun interface EventSink {
   fun emit(clientId: Int, type: String, payloadJson: String)
 }
 
+internal class OnceCallback(callback: (String?, String?) -> Unit) {
+  private val callback = java.util.concurrent.atomic.AtomicReference(callback)
+
+  fun call(json: String?, error: String?) {
+    callback.getAndSet(null)?.invoke(json, error)
+  }
+}
+
 internal object DailyClientRegistry {
   private val main = Handler(Looper.getMainLooper())
   private val nextId = AtomicInteger(1)
   private val clients = HashMap<Int, ClientBox>()
   var eventSink: EventSink? = null
+  private var eventListenerOwner: Any? = null
+
+  fun setEventListener(owner: Any, sink: EventSink) {
+    postToMain {
+      eventListenerOwner = owner
+      eventSink = sink
+    }
+  }
+
+  fun clearEventListener(owner: Any) {
+    postToMain {
+      if (eventListenerOwner === owner) {
+        eventListenerOwner = null
+        eventSink = null
+      }
+    }
+  }
+
+  fun clearEventListener() {
+    postToMain {
+      eventListenerOwner = null
+      eventSink = null
+    }
+  }
 
   fun createOnMain(): Int {
     val id = nextId.getAndIncrement()
@@ -123,16 +155,17 @@ internal object DailyClientRegistry {
   }
 
   fun perform(clientId: Int, action: String, payload: JSONObject, callback: (String?, String?) -> Unit) {
+    val once = OnceCallback(callback)
     main.post {
       val box = clients[clientId]
       if (box == null) {
-        callback(null, "Unknown CallClient $clientId")
+        once.call(null, "Unknown CallClient $clientId")
         return@post
       }
       try {
-        box.perform(action, payload, callback)
+        box.perform(action, payload, once::call)
       } catch (error: Exception) {
-        callback(null, error.message ?: error.toString())
+        once.call(null, error.message ?: error.toString())
       }
     }
   }

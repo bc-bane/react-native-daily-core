@@ -1,6 +1,6 @@
 import React from 'react';
 import type {StyleProp, ViewStyle} from 'react-native';
-import {DailyVideoView} from './ExpoDailyCallClient';
+import {DailyVideoView} from './NitroDailyCallClient';
 import type {CallClient} from './CallClient';
 import type {VideoSource} from './types';
 

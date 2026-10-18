@@ -73,6 +73,9 @@ public class DailyVideoHost: UIView {
 public class DailyClientRegistry: NSObject {
   @objc public static let shared = DailyClientRegistry()
   @objc public var eventSink: ((NSNumber, NSString, NSString) -> Void)?
+  private var eventListenerOwner: UUID?
+
+  static let moduleUnloadNotification = Notification.Name("DailyCallClientModuleUnload")
 
   private override init() {
     super.init()
@@ -89,6 +92,29 @@ public class DailyClientRegistry: NSObject {
       queue: .main
     ) { _ in
       UIApplication.shared.isIdleTimerDisabled = false
+    }
+    NotificationCenter.default.addObserver(
+      forName: DailyClientRegistry.moduleUnloadNotification,
+      object: nil,
+      queue: .main
+    ) { _ in
+      MainActor.assumeIsolated {
+        DailyClientRegistry.shared.eventListenerOwner = nil
+        DailyClientRegistry.shared.eventSink = nil
+        DailyClientRegistry.shared.destroyAll()
+      }
+    }
+  }
+
+  func setEventListener(owner: UUID, sink: @escaping (NSNumber, NSString, NSString) -> Void) {
+    eventListenerOwner = owner
+    eventSink = sink
+  }
+
+  func clearEventListener(owner: UUID) {
+    if eventListenerOwner == owner {
+      eventListenerOwner = nil
+      eventSink = nil
     }
   }
 
@@ -144,12 +170,15 @@ public class DailyClientRegistry: NSObject {
   }
 
   @objc public func perform(_ clientId: Int, action: String, payloadJson: String, completion: @escaping (String?, String?) -> Void) {
+    let once = OnceCompletion(completion)
     onMain {
       guard let box = self.boxes[clientId] else {
-        completion(nil, "Unknown CallClient \(clientId)")
+        once.call(nil, "Unknown CallClient \(clientId)")
         return
       }
-      box.perform(action: action, payloadJson: payloadJson, completion: completion)
+      box.perform(action: action, payloadJson: payloadJson) { json, error in
+        once.call(json, error)
+      }
     }
   }
 
@@ -194,6 +223,27 @@ public class DailyClientRegistry: NSObject {
     }
   }
 
+}
+
+private final class OnceCompletion: @unchecked Sendable {
+  private let lock = NSLock()
+  private var completion: Completion?
+
+  init(_ completion: @escaping Completion) {
+    self.completion = completion
+  }
+
+  func call(_ json: String?, _ error: String?) {
+    lock.lock()
+    let completion = self.completion
+    self.completion = nil
+    lock.unlock()
+    completion?(json, error)
+  }
+
+  deinit {
+    call(nil, "CallClient action did not finish")
+  }
 }
 
 @MainActor

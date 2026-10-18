@@ -19,7 +19,10 @@ Pod::Spec.new do |s|
     "DEFINES_MODULE" => "YES",
   }
 
-  s.dependency "ExpoModulesCore"
+  s.dependency "React-Core"
   s.dependency "Daily", "0.40.0"
   s.dependency "DailySystemBroadcast", "0.40.0"
+
+  load "nitrogen/generated/ios/ReactNativeDailyCore+autolinking.rb"
+  add_nitrogen_files(s)
 end

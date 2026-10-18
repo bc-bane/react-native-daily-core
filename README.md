@@ -4,7 +4,7 @@ A React Native `CallClient` for Daily, implemented on the official iOS and Andro
 
 The API follows [daily-client-ios](https://reference-ios.daily.co/documentation/daily/callclient), [daily-client-android](https://reference-android.daily.co/daily-android/co.daily/-call-client/index.html), and `daily-flutter`.
 
-Install it in an Expo app, or in a vanilla React Native app that already has its own `ios/` and `android/` projects. The native code is an Expo module, so both kinds of app depend on the `expo` and `expo-modules-core` packages. Requires React Native 0.82 or newer. The example app uses Expo SDK 58.
+Install it in a React Native app that already has `ios/` and `android/` projects. Native bindings use [Nitro Modules](https://nitro.margelo.com/), which this package depends on. Requires React Native 0.82 or newer with the New Architecture enabled.
 
 ## Why this library exists
 
@@ -17,15 +17,15 @@ In practice that means:
 - **Native media path** — Video renders in the SDK’s `VideoView`; audio plays inside the SDK. Less work on the JS thread and no `MediaStreamTrack` plumbing through the bridge.
 - **Same releases as mobile SDKs** — You depend on `Daily` / `co.daily:client` (currently 0.40.0), including current libwebrtc, Android [16 KB page-size](https://developer.android.com/guide/practices/page-sizes)–aligned binaries, and fixes that apply to native clients first.
 - **iOS-only capabilities** — Features such as [Daily Adaptive HEVC](https://www.daily.co/blog/introducing-daily-adaptive-hevc-for-ios-native-video/) (hardware H.265 plus H.264 fallback for cross-platform calls) live in the native iOS SDK, not in `daily-js`. This package is the path to use that stack from React Native when you expose the native publishing APIs you need.
-- **Simpler install** — No `@daily-co/react-native-webrtc`, background timer, or get-random-values peers; iOS screen share follows Daily’s [`DailySystemBroadcast`](https://docs.daily.co/docs/ios/screen-share) flow instead of a separate RN screen-share extension bridge.
+- **Simpler install** — No `@daily-co/react-native-webrtc`, background timer, or get-random-values peers. Android screen share is `startScreenShare()`. iOS screen share is one setup command, then the same call.
 
 Web apps should keep using [`daily-js`](https://docs.daily.co/reference/daily-js). Use this library when your React Native app should behave like a Daily native mobile client. For API differences from the old wrapper, see [MIGRATION.md](MIGRATION.md).
 
 ## Requirements
 
 - Node >= 22.13 (see `.nvmrc`)
-- `expo` and `expo-modules-core` (already present in an Expo app; add them once in a vanilla React Native app)
-- React Native >= 0.82
+- React Native >= 0.82 with New Architecture enabled
+- `react-native-nitro-modules` 0.37.1 (installed with this package)
 - iOS deployment target >= 16.4
 - Android `minSdkVersion` >= 24
 - Android Gradle Plugin 8.5.1 or newer and NDK r28 or newer when you compile native code
@@ -33,40 +33,28 @@ Web apps should keep using [`daily-js`](https://docs.daily.co/reference/daily-js
 
 ## Installation
 
-This package installs in an Expo app and in a vanilla React Native app. Both use the same `CallClient` and `VideoView`. A vanilla app stays a normal React Native project. It adds the `expo` package so the native module can autolink. You do not create an Expo project or run prebuild.
-
 ```bash
-npm install react-native-daily-core
-```
-
-### Expo app
-
-Add the config plugin, then prebuild (or run `npx expo run:ios` / `npx expo run:android`, which prebuild for you):
-
-```json
-{
-  "plugins": ["react-native-daily-core"]
-}
-```
-
-The plugin writes the camera and microphone usage strings, the iOS `voip` background mode, and the Android call permissions.
-
-### Vanilla React Native app
-
-If the app does not already use Expo modules, install them in the existing project first: [Install Expo modules in an existing React Native project](https://docs.expo.dev/bare/installing-expo-modules/).
-
-```bash
-npx install-expo-modules@latest
 npm install react-native-daily-core
 cd ios && pod install
 ```
 
-Rebuild the iOS and Android apps. Autolinking includes the `DailyCallClient` native module from `expo-module.config.json`. The config plugin is only for Expo prebuild, so set permissions in the app yourself:
+Rebuild the iOS and Android apps. Autolinking includes this package and its Nitro dependency. Set permissions in the app:
 
 - `Info.plist`: `NSCameraUsageDescription`, `NSMicrophoneUsageDescription`, and `UIBackgroundModes` = `voip` when audio should continue in the background
 - Android: the library manifest already merges camera, microphone, notification, and foreground-service permissions
 
-Screen sharing on iOS uses the `DailySystemBroadcast` pod that this package depends on. Follow the [Daily iOS screen share guide](https://docs.daily.co/docs/ios/screen-share) to add the broadcast upload extension to the host app. Android screen share uses media projection; see the [Android screen share guide](https://docs.daily.co/docs/android/screen-share).
+Screen sharing does not require the Daily native installation guides.
+
+On Android, call `startScreenShare()` while the app is in the foreground. This package merges the media-projection permission and foreground service, and it handles the capture permission result.
+
+On iOS, ReplayKit needs a broadcast upload extension in the app target. From the app root, run this once:
+
+```bash
+npx react-native-daily-core setup-ios-screen-share
+cd ios && pod install
+```
+
+The command adds a `DailyScreenCaptureExtension` target, an App Group of `group.<bundle id>`, and the Info.plist keys `startScreenShare()` reads. Confirm that App Group exists for the bundle id in Xcode (**Signing & Capabilities**) or the Apple Developer portal. Signing uses the development team already set on the app target. Then call `startScreenShare()`.
 
 Apps moving off `@daily-co/react-native-daily-js` should read [MIGRATION.md](MIGRATION.md). That package remains Daily's maintained React Native client.
 
@@ -99,7 +87,7 @@ call.release();
 
 For React Compiler–friendly function components, use `useCallState(call)` and `useParticipants(call)` instead of reading `call.callState()` or `call.participants()` during render.
 
-Errors from native code reject with code `E_DAILY` and a string message, except Android screen share with no foreground activity (`E_NO_ACTIVITY`).
+Native failures reject the promise with an `Error` message. Android screen share with no foreground activity rejects with `Screen share needs a foreground activity`.
 
 ## Exports
 
@@ -171,7 +159,7 @@ Native parity: [iOS CallClient](https://reference-ios.daily.co/documentation/dai
 | Method | Notes |
 | --- | --- |
 | `sendAppMessage(message, to?)` | `message` must already be JSON text (same as native). Optional `to` participant id; omit to broadcast. |
-| `startScreenShare()` | iOS: ReplayKit via SDK on main thread; may emit `systemBroadcastStarted` / `systemBroadcastStopped`. Android: media projection intent on main thread; requires foreground activity (`E_NO_ACTIVITY` otherwise). |
+| `startScreenShare()` | iOS: ReplayKit system picker after `setup-ios-screen-share`; may emit `systemBroadcastStarted` / `systemBroadcastStopped`. Android: media projection prompt while the app is in the foreground. |
 | `stopScreenShare()` | Android stops the projection foreground service when sharing ends. |
 
 ### Recording, live streaming, transcription
@@ -219,9 +207,7 @@ The native view refreshes when participant media changes. After `release()`, det
 
 ## Example
 
-`example/` is the manual test app: join, leave, local and remote video, microphone, and camera.
-
-The example is an Expo SDK 58 app. It needs Node 22.13 or newer.
+`example/` is the manual test app: join, leave, local and remote video, microphone, and camera. It needs Node 22.13 or newer.
 
 ```bash
 cd example
@@ -230,4 +216,4 @@ npm run ios
 npm run android
 ```
 
-`npm run ios` and `npm run android` run `expo run`, which generates the native projects. Copy `example/daily.env.json.example` to `example/daily.env.json` and set `url` (and optional `token`). For an iOS device build, choose your Apple Development team in Xcode (**Signing & Capabilities**). That choice stays in the generated `example/ios` project and is not committed.
+Those scripts generate the native projects. Copy `example/daily.env.json.example` to `example/daily.env.json` and set `url` (and optional `token`). For an iOS device build, choose your Apple Development team in Xcode (**Signing & Capabilities**). That choice stays in the generated `example/ios` project and is not committed.

@@ -20,7 +20,7 @@ npm uninstall @daily-co/react-native-daily-js @daily-co/react-native-webrtc @rea
 npm install react-native-daily-core
 ```
 
-Peer dependencies are `expo`, `expo-modules-core`, `react` >= 19, and `react-native` >= 0.82. The example app uses Expo SDK 58 (React Native 0.88).
+Peer dependencies are `react` >= 19 and `react-native` >= 0.82 (New Architecture). This package depends on `react-native-nitro-modules`, so the app does not install that package itself. The example app uses Expo SDK 58 (React Native 0.88).
 
 ### iOS Podfile
 
@@ -36,9 +36,16 @@ The Daily iOS SDK supports iOS 14. This package’s podspec requires iOS 16.4, w
 platform :ios, '16.4'
 ```
 
-Do not add `pod 'Daily'` or `pod 'DailySystemBroadcast'` in the app Podfile. This package's podspec depends on both at 0.40.0, and autolinking pulls the pod in. Run `pod install` after upgrading.
+Do not add `pod 'Daily'` or `pod 'DailySystemBroadcast'` to the app target. This package's podspec depends on both at 0.40.0, and autolinking pulls them in. Run `pod install` after upgrading.
 
-Remove the `ReactNativeDailyJSScreenShareExtension` target and the setup from [rn-screen-share-extension](https://github.com/daily-co/rn-screen-share-extension/). Screen share now uses `DailySystemBroadcast`, which the podspec already depends on. The broadcast upload extension still has to be added to the host app. Follow the [Daily iOS screen share guide](https://docs.daily.co/docs/ios/screen-share).
+Remove the `ReactNativeDailyJSScreenShareExtension` target and the setup from [rn-screen-share-extension](https://github.com/daily-co/rn-screen-share-extension/). Android screen share is `startScreenShare()` while the app is in the foreground. iOS screen share is one command from the app root, then `pod install`:
+
+```bash
+npx react-native-daily-core setup-ios-screen-share
+cd ios && pod install
+```
+
+That adds the broadcast upload extension and an App Group of `group.<bundle id>`. Confirm the App Group for that bundle id in Signing & Capabilities. The command also adds `DailySystemBroadcast` to the extension target only.
 
 `Info.plist` is unchanged: `NSCameraUsageDescription`, `NSMicrophoneUsageDescription`, and `UIBackgroundModes` = `voip`.
 
@@ -50,17 +57,16 @@ React Native 0.82 and newer have no legacy architecture switch.
 
 ## Expo apps and vanilla React Native apps
 
-`CallClient` and `VideoView` are an Expo module named `DailyCallClient`. JavaScript loads them with `requireNativeModule` and `requireNativeViewManager` from `expo-modules-core`. The same package works in an Expo app and in a vanilla React Native app. A vanilla app keeps its own Xcode and Gradle projects. It adds the `expo` package so the native module can autolink.
+`CallClient` and `VideoView` are implemented with [Nitro Modules](https://nitro.margelo.com/). JavaScript uses JSI HybridObjects and a Nitro HybridView. `react-native-nitro-modules` is a dependency of this package. You do **not** need `expo-modules-core` or `npx install-expo-modules` for this library.
 
-**Vanilla React Native.** If the app does not already use Expo modules, install them in the existing project first: [Install Expo modules in an existing React Native project](https://docs.expo.dev/bare/installing-expo-modules/).
+**Vanilla React Native.**
 
 ```bash
-npx install-expo-modules@latest
 npm install react-native-daily-core
 cd ios && pod install
 ```
 
-Rebuild both apps. The config plugin is only for Expo prebuild. In a vanilla app, set `NSCameraUsageDescription`, `NSMicrophoneUsageDescription`, and `UIBackgroundModes` = `voip` in `Info.plist` yourself. The Android library manifest merges the call permissions.
+Rebuild both apps. The config plugin is optional and only applies to Expo prebuild. In a vanilla app, set `NSCameraUsageDescription`, `NSMicrophoneUsageDescription`, and `UIBackgroundModes` = `voip` in `Info.plist` yourself. The Android library manifest merges the call permissions.
 
 **Expo app.** Add the config plugin in `app.json` (or `app.config.js`):
 
@@ -74,7 +80,7 @@ Then prebuild or run `npx expo run:ios` / `npx expo run:android`. The plugin wri
 
 ### Monorepo / local package install
 
-With **pnpm**, use a **`link:`** dependency to the library root so `ios/`, `android/`, and `expo-module.config.json` are present:
+With **pnpm**, use a **`link:`** dependency to the library root so `ios/`, `android/`, and `nitro.json` are present:
 
 ```json
 "react-native-daily-core": "link:../../../AltCode/react-native-daily-js"
@@ -295,4 +301,4 @@ Run on **iOS and Android** for **Tinker** and **TechTalk** before merging a `rea
 | Background | Optional: brief background/foreground during call; AV recovers or fails gracefully. |
 | TechTalk | Same join/leave path via shared `VideoCall` layout. |
 
-If **`Cannot find native module 'DailyCallClient'`** appears at runtime, re-check the [Expo modules](#expo-modules) section and run a clean prebuild.
+If Nitro fails at runtime (for example `NitroModules.createHybridObject` throws), confirm New Architecture is enabled and you ran `pod install` plus a clean native rebuild after upgrading. `react-native-nitro-modules` is installed with this package.

@@ -3,10 +3,8 @@ package com.daily.reactlibrary
 import android.content.Context
 import android.widget.FrameLayout
 import co.daily.view.VideoView
-import expo.modules.kotlin.AppContext
-import expo.modules.kotlin.views.ExpoView
 
-class DailyVideoHostView(context: Context, appContext: AppContext) : ExpoView(context, appContext) {
+class DailyVideoHostView(context: Context) : FrameLayout(context) {
   private val videoView = VideoView(context)
   var clientId: Int = 0
   var participantId: String = ""
@@ -28,6 +26,10 @@ class DailyVideoHostView(context: Context, appContext: AppContext) : ExpoView(co
     instances.remove(this)
     videoView.track = null
     super.onDetachedFromWindow()
+  }
+
+  fun clearTrack() {
+    videoView.track = null
   }
 
   fun refresh() {

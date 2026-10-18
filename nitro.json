@@ -1,0 +1,35 @@
+{
+  "$schema": "https://nitro.margelo.com/nitro.schema.json",
+  "cxxNamespace": ["daily"],
+  "ios": {
+    "iosModuleName": "ReactNativeDailyCore"
+  },
+  "android": {
+    "androidNamespace": ["daily", "reactlibrary"],
+    "androidCxxLibName": "ReactNativeDailyCore"
+  },
+  "autolinking": {
+    "DailyCallClientBridge": {
+      "ios": {
+        "language": "swift",
+        "implementationClassName": "HybridDailyCallClientBridge"
+      },
+      "android": {
+        "language": "kotlin",
+        "implementationClassName": "HybridDailyCallClientBridge"
+      }
+    },
+    "DailyVideoView": {
+      "ios": {
+        "language": "swift",
+        "implementationClassName": "HybridDailyVideoView"
+      },
+      "android": {
+        "language": "kotlin",
+        "implementationClassName": "HybridDailyVideoView"
+      }
+    }
+  },
+  "ignorePaths": ["**/node_modules"],
+  "gitAttributesGeneratedFlag": true
+}

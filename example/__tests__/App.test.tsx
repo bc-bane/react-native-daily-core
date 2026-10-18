@@ -13,7 +13,7 @@ jest.mock('react-native-safe-area-context', () => {
   };
 });
 
-jest.mock('../../src/ExpoDailyCallClient', () => {
+jest.mock('../../src/NitroDailyCallClient', () => {
   const React = require('react');
   const {View} = require('react-native');
   return {
@@ -24,9 +24,7 @@ jest.mock('../../src/ExpoDailyCallClient', () => {
       destroyClient: () => undefined,
       perform: () => Promise.resolve('{}'),
     }),
-    getDailyCallClientEventEmitter: () => ({
-      addListener: () => ({remove: () => undefined}),
-    }),
+    subscribeDailyCallClientEvents: () => ({remove: () => undefined}),
   };
 });
 
