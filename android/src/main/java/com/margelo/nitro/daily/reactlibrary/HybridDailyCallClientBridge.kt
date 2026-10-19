@@ -17,6 +17,10 @@ import kotlin.coroutines.resume
 import kotlin.coroutines.resumeWithException
 import kotlin.coroutines.suspendCoroutine
 
+private fun isScreenShareCancelled(error: String): Boolean {
+  return error == "Screen share permission was not granted" || error == "Screen share was cancelled"
+}
+
 @DoNotStrip
 class HybridDailyCallClientBridge : HybridDailyCallClientBridgeSpec() {
   private val listenerOwner = Any()
@@ -54,10 +58,10 @@ class HybridDailyCallClientBridge : HybridDailyCallClientBridgeSpec() {
           return@startScreenShareFromActivity
         }
         mainHandler.post {
-          if (error != null) {
-            promise.reject(IllegalStateException(error))
-          } else {
+          if (error == null || isScreenShareCancelled(error)) {
             promise.resolve(json ?: "{}")
+          } else {
+            promise.reject(IllegalStateException(error))
           }
         }
       }
