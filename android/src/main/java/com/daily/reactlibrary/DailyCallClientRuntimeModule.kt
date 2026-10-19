@@ -6,11 +6,13 @@ import com.facebook.react.bridge.LifecycleEventListener
 import com.facebook.react.bridge.ReactApplicationContext
 import com.facebook.react.bridge.ActivityEventListener
 import com.facebook.react.bridge.ReactContextBaseJavaModule
+import com.facebook.react.turbomodule.core.interfaces.TurboModule
 
 class DailyCallClientRuntimeModule(reactContext: ReactApplicationContext) :
     ReactContextBaseJavaModule(reactContext),
     ActivityEventListener,
-    LifecycleEventListener {
+    LifecycleEventListener,
+    TurboModule {
 
   init {
     DailyRuntime.attach(reactContext.applicationContext) { reactContext.currentActivity }
@@ -31,7 +33,7 @@ class DailyCallClientRuntimeModule(reactContext: ReactApplicationContext) :
     DailyRuntime.handleScreenShareResult(resultCode, data)
   }
 
-  override fun onNewIntent(intent: Intent?) {}
+  override fun onNewIntent(intent: Intent) {}
 
   override fun onHostResume() {}
 

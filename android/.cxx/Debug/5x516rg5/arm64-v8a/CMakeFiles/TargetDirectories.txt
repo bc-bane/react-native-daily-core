@@ -1,0 +1,3 @@
+/Users/bobcook/AltCode/react-native-daily-js/android/.cxx/Debug/5x516rg5/arm64-v8a/CMakeFiles/ReactNativeDailyCore.dir
+/Users/bobcook/AltCode/react-native-daily-js/android/.cxx/Debug/5x516rg5/arm64-v8a/CMakeFiles/edit_cache.dir
+/Users/bobcook/AltCode/react-native-daily-js/android/.cxx/Debug/5x516rg5/arm64-v8a/CMakeFiles/rebuild_cache.dir

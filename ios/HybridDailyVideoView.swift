@@ -2,11 +2,11 @@ import NitroModules
 import UIKit
 
 public class HybridDailyVideoView: HybridDailyVideoViewSpec_base, HybridDailyVideoViewSpec_protocol {
-  public typealias ViewType = DailyVideoHost
+  public typealias ViewType = UIView
 
   private let host = DailyVideoHost(frame: .zero)
 
-  public var view: DailyVideoHost { host }
+  public var view: UIView { host }
 
   public var clientId: Double = 0 {
     didSet { host.clientId = Int(clientId) }

@@ -1,0 +1,6 @@
+/Users/bobcook/AltCode/react-native-daily-js/android/.cxx/Debug/5x516rg5/prefab/arm64-v8a/prefab/lib/aarch64-linux-android/cmake/ReactAndroid/ReactAndroidConfig.cmake
+/Users/bobcook/AltCode/react-native-daily-js/android/.cxx/Debug/5x516rg5/prefab/arm64-v8a/prefab/lib/aarch64-linux-android/cmake/ReactAndroid/ReactAndroidConfigVersion.cmake
+/Users/bobcook/AltCode/react-native-daily-js/android/.cxx/Debug/5x516rg5/prefab/arm64-v8a/prefab/lib/aarch64-linux-android/cmake/fbjni/fbjniConfig.cmake
+/Users/bobcook/AltCode/react-native-daily-js/android/.cxx/Debug/5x516rg5/prefab/arm64-v8a/prefab/lib/aarch64-linux-android/cmake/fbjni/fbjniConfigVersion.cmake
+/Users/bobcook/AltCode/react-native-daily-js/android/.cxx/Debug/5x516rg5/prefab/arm64-v8a/prefab/lib/aarch64-linux-android/cmake/react-native-nitro-modules/react-native-nitro-modulesConfig.cmake
+/Users/bobcook/AltCode/react-native-daily-js/android/CMakeLists.txt

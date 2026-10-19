@@ -4,12 +4,11 @@ import UIKit
 
 private typealias Completion = (String?, String?) -> Void
 
-@objc(DailyVideoHost)
-public class DailyVideoHost: UIView {
+class DailyVideoHost: UIView {
   private let videoView = VideoView(frame: .zero)
-  @objc public var clientId: Int = 0
-  @objc public var participantId: String = ""
-  @objc public var videoSource: String = "camera"
+  var clientId: Int = 0
+  var participantId: String = ""
+  var videoSource: String = "camera"
 
   public override init(frame: CGRect) {
     super.init(frame: frame)
@@ -25,7 +24,7 @@ public class DailyVideoHost: UIView {
     return nil
   }
 
-  @objc public func refreshTrack() {
+  func refreshTrack() {
     let apply = {
       self.videoView.track = DailyClientRegistry.shared.videoTrack(
         clientId: self.clientId,
@@ -40,7 +39,7 @@ public class DailyVideoHost: UIView {
     }
   }
 
-  @objc public func clearTrack() {
+  func clearTrack() {
     let apply = { self.videoView.track = nil }
     if Thread.isMainThread {
       MainActor.assumeIsolated(apply)
@@ -49,11 +48,11 @@ public class DailyVideoHost: UIView {
     }
   }
 
-  @objc public func setMirrored(_ mirrored: Bool) {
+  func setMirrored(_ mirrored: Bool) {
     videoView.transform = mirrored ? CGAffineTransform(scaleX: -1, y: 1) : .identity
   }
 
-  @objc public func setObjectFit(_ objectFit: String) {
+  func setObjectFit(_ objectFit: String) {
     videoView.videoScaleMode = objectFit == "contain" ? .fit : .fill
   }
 

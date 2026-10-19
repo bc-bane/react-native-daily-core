@@ -1,0 +1,9 @@
+{
+  "enabled": true,
+  "prefabPath": "/private/var/folders/97/ymb2mss157d6sgjg30gs0j8m0000gn/T/cursor-sandbox-cache/83d22ceafd4ad6008a38cde98d52e191/gradle/caches/modules-2/files-2.1/com.google.prefab/cli/2.1.0/aa32fec809c44fa531f01dcfb739b5b3304d3050/cli-2.1.0-all.jar",
+  "packages": [
+    "/private/var/folders/97/ymb2mss157d6sgjg30gs0j8m0000gn/T/cursor-sandbox-cache/83d22ceafd4ad6008a38cde98d52e191/gradle/caches/9.4.1/transforms/892e41b78f62a347e26edf02bde8c06c/transformed/react-android-0.88.0-debug/prefab",
+    "/Users/bobcook/AltCode/react-native-daily-js/node_modules/react-native-nitro-modules/android/build/intermediates/prefab_package/debug/prefab",
+    "/private/var/folders/97/ymb2mss157d6sgjg30gs0j8m0000gn/T/cursor-sandbox-cache/83d22ceafd4ad6008a38cde98d52e191/gradle/caches/9.4.1/transforms/00e9f838836fbc0e39e2c6aa6eaaebb6/transformed/fbjni-0.7.0/prefab"
+  ]
+}

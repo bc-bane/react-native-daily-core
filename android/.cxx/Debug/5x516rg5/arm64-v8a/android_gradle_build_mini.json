@@ -1,0 +1,37 @@
+{
+  "buildFiles": [
+    "/Users/bobcook/AltCode/react-native-daily-js/android/.cxx/Debug/5x516rg5/prefab/arm64-v8a/prefab/lib/aarch64-linux-android/cmake/ReactAndroid/ReactAndroidConfig.cmake",
+    "/Users/bobcook/AltCode/react-native-daily-js/android/.cxx/Debug/5x516rg5/prefab/arm64-v8a/prefab/lib/aarch64-linux-android/cmake/ReactAndroid/ReactAndroidConfigVersion.cmake",
+    "/Users/bobcook/AltCode/react-native-daily-js/android/.cxx/Debug/5x516rg5/prefab/arm64-v8a/prefab/lib/aarch64-linux-android/cmake/fbjni/fbjniConfig.cmake",
+    "/Users/bobcook/AltCode/react-native-daily-js/android/.cxx/Debug/5x516rg5/prefab/arm64-v8a/prefab/lib/aarch64-linux-android/cmake/fbjni/fbjniConfigVersion.cmake",
+    "/Users/bobcook/AltCode/react-native-daily-js/android/.cxx/Debug/5x516rg5/prefab/arm64-v8a/prefab/lib/aarch64-linux-android/cmake/react-native-nitro-modules/react-native-nitro-modulesConfig.cmake",
+    "/Users/bobcook/AltCode/react-native-daily-js/android/CMakeLists.txt"
+  ],
+  "cleanCommandsComponents": [
+    [
+      "/Users/bobcook/Library/Android/sdk/cmake/3.22.1/bin/ninja",
+      "-C",
+      "/Users/bobcook/AltCode/react-native-daily-js/android/.cxx/Debug/5x516rg5/arm64-v8a",
+      "clean"
+    ]
+  ],
+  "buildTargetsCommandComponents": [
+    "/Users/bobcook/Library/Android/sdk/cmake/3.22.1/bin/ninja",
+    "-C",
+    "/Users/bobcook/AltCode/react-native-daily-js/android/.cxx/Debug/5x516rg5/arm64-v8a",
+    "{LIST_OF_TARGETS_TO_BUILD}"
+  ],
+  "libraries": {
+    "ReactNativeDailyCore::@6890427a1f51a3e7e1df": {
+      "artifactName": "ReactNativeDailyCore",
+      "abi": "arm64-v8a",
+      "output": "/Users/bobcook/AltCode/react-native-daily-js/android/build/intermediates/cxx/Debug/5x516rg5/obj/arm64-v8a/libReactNativeDailyCore.so",
+      "runtimeFiles": [
+        "/private/var/folders/97/ymb2mss157d6sgjg30gs0j8m0000gn/T/cursor-sandbox-cache/83d22ceafd4ad6008a38cde98d52e191/gradle/caches/9.4.1/transforms/00e9f838836fbc0e39e2c6aa6eaaebb6/transformed/fbjni-0.7.0/prefab/modules/fbjni/libs/android.arm64-v8a/libfbjni.so",
+        "/private/var/folders/97/ymb2mss157d6sgjg30gs0j8m0000gn/T/cursor-sandbox-cache/83d22ceafd4ad6008a38cde98d52e191/gradle/caches/9.4.1/transforms/892e41b78f62a347e26edf02bde8c06c/transformed/react-android-0.88.0-debug/prefab/modules/jsi/libs/android.arm64-v8a/libjsi.so",
+        "/Users/bobcook/AltCode/react-native-daily-js/node_modules/react-native-nitro-modules/android/build/intermediates/cxx/Debug/6w5i4o4i/obj/arm64-v8a/libNitroModules.so",
+        "/private/var/folders/97/ymb2mss157d6sgjg30gs0j8m0000gn/T/cursor-sandbox-cache/83d22ceafd4ad6008a38cde98d52e191/gradle/caches/9.4.1/transforms/892e41b78f62a347e26edf02bde8c06c/transformed/react-android-0.88.0-debug/prefab/modules/reactnative/libs/android.arm64-v8a/libreactnative.so"
+      ]
+    }
+  }
+}

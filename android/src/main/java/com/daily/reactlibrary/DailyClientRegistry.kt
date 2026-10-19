@@ -33,25 +33,16 @@ import co.daily.model.streaming.StreamingStartMode
 import co.daily.model.transcription.StartTranscriptionProperties
 import co.daily.model.transcription.TranscriptionMessageData
 import co.daily.model.transcription.TranscriptionStatus
-import co.daily.settings.BitRate
 import co.daily.settings.CameraInputSettingsUpdate
 import co.daily.settings.ClientSettingsUpdate
 import co.daily.settings.Disable
 import co.daily.settings.Enable
 import co.daily.settings.FacingModeUpdate
-import co.daily.settings.FrameRate
 import co.daily.settings.InputSettings
 import co.daily.settings.InputSettingsUpdate
 import co.daily.settings.MicrophoneInputSettingsUpdate
-import co.daily.settings.PublishingSettingsUpdate
-import co.daily.settings.Scale
 import co.daily.settings.ScreenVideoInputSettingsUpdate
-import co.daily.settings.ScreenVideoPublishingSettingsUpdate
-import co.daily.settings.VideoEncodingSettingsUpdate
-import co.daily.settings.VideoEncodingsSettingsUpdate
-import co.daily.settings.VideoMaxQualityUpdate
 import co.daily.settings.VideoMediaTrackSettingsUpdate
-import co.daily.settings.VideoSendSettingsUpdate
 import co.daily.settings.PublishingSettings
 import co.daily.settings.subscription.MediaSubscriptionSettings
 import co.daily.settings.subscription.SubscriptionProfile
@@ -376,9 +367,7 @@ private class ClientBox(
   }
 
   fun startScreenShare(intent: Intent, callback: (String?, String?) -> Unit) {
-    client.updatePublishing(screenSharePublishing()) {
-      client.startScreenShare(intent) { finish(it.error?.msg, callback) }
-    }
+    client.startScreenShare(intent) { finish(it.error?.msg, callback) }
   }
 
   private fun updateInputs(payload: JSONObject, callback: (String?, String?) -> Unit) {
@@ -659,23 +648,6 @@ private class ClientBox(
     emit("transcriptionError", JSONObject().put("message", message))
   }
 }
-
-private fun screenSharePublishing() = PublishingSettingsUpdate(
-  screenVideo = ScreenVideoPublishingSettingsUpdate(
-    sendSettings = VideoSendSettingsUpdate(
-      maxQuality = VideoMaxQualityUpdate.high,
-      encodings = VideoEncodingsSettingsUpdate(
-        mapOf(
-          VideoMaxQualityUpdate.high to VideoEncodingSettingsUpdate(
-            maxBitrate = BitRate(1_500_000),
-            maxFramerate = FrameRate(15),
-            scaleResolutionDownBy = Scale(2f),
-          ),
-        ),
-      ),
-    ),
-  ),
-)
 
 private fun jsonForAppMessage(message: String): String {
   val trimmed = message.trim()

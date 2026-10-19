@@ -30,7 +30,7 @@ class DailyCallClientPackage : BaseReactPackage() {
           false,
           true,
           false,
-          false,
+          true,
         ),
       )
     }

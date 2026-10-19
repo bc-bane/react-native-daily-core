@@ -1,0 +1,10 @@
+# ninja log v5
+0	2266	1792377253661350771	CMakeFiles/ReactNativeDailyCore.dir/src/main/cpp/cpp-adapter.cpp.o	2c76d45a19184734
+8	208	1792377444566536655	../../../../build/intermediates/cxx/Debug/5x516rg5/obj/arm64-v8a/libReactNativeDailyCore.so	94cf4d922139dedf
+7	3208	1792377254600196134	CMakeFiles/ReactNativeDailyCore.dir/Users/bobcook/AltCode/react-native-daily-js/nitrogen/generated/android/c++/JHybridDailyVideoViewSpec.cpp.o	1ec71b7e7f251a4a
+5	4999	1792377256404723664	CMakeFiles/ReactNativeDailyCore.dir/Users/bobcook/AltCode/react-native-daily-js/nitrogen/generated/shared/c++/views/HybridDailyVideoViewComponent.cpp.o	6272fba920cd2fe7
+3	3822	1792377254972502136	CMakeFiles/ReactNativeDailyCore.dir/Users/bobcook/AltCode/react-native-daily-js/nitrogen/generated/shared/c++/HybridDailyVideoViewSpec.cpp.o	70f42fa93a1751a8
+6	3940	1792377255314384387	CMakeFiles/ReactNativeDailyCore.dir/Users/bobcook/AltCode/react-native-daily-js/nitrogen/generated/android/c++/JHybridDailyCallClientBridgeSpec.cpp.o	f71b1f3bcf92911c
+3	4595	1792377255983206809	CMakeFiles/ReactNativeDailyCore.dir/Users/bobcook/AltCode/react-native-daily-js/nitrogen/generated/shared/c++/HybridDailyCallClientBridgeSpec.cpp.o	fdcd785acb23fc43
+8	5385	1792377256788543646	CMakeFiles/ReactNativeDailyCore.dir/Users/bobcook/AltCode/react-native-daily-js/nitrogen/generated/android/c++/views/JHybridDailyVideoViewStateUpdater.cpp.o	805b673a2db64927
+2	10686	1792377257442873986	CMakeFiles/ReactNativeDailyCore.dir/Users/bobcook/AltCode/react-native-daily-js/nitrogen/generated/android/ReactNativeDailyCoreOnLoad.cpp.o	4902e176e509df64

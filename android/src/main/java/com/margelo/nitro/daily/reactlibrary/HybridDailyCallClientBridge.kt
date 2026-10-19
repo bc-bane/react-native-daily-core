@@ -11,6 +11,7 @@ import android.os.Handler
 import android.os.Looper
 import com.facebook.proguard.annotations.DoNotStrip
 import com.margelo.nitro.core.Promise
+import java.util.concurrent.atomic.AtomicBoolean
 import org.json.JSONObject
 import kotlin.coroutines.resume
 import kotlin.coroutines.resumeWithException
@@ -46,17 +47,21 @@ class HybridDailyCallClientBridge : HybridDailyCallClientBridgeSpec() {
       if (activity == null) {
         return Promise.rejected(IllegalStateException("Screen share needs a foreground activity"))
       }
-      return Promise.async {
-        suspendCoroutine { continuation ->
-          startScreenShareFromActivity(activity, clientId.toInt()) { json, error ->
-            if (error != null) {
-              continuation.resumeWithException(IllegalStateException(error))
-            } else {
-              continuation.resume(json ?: "{}")
-            }
+      val promise = Promise<String>()
+      val settled = AtomicBoolean(false)
+      startScreenShareFromActivity(activity, clientId.toInt()) { json, error ->
+        if (!settled.compareAndSet(false, true)) {
+          return@startScreenShareFromActivity
+        }
+        mainHandler.post {
+          if (error != null) {
+            promise.reject(IllegalStateException(error))
+          } else {
+            promise.resolve(json ?: "{}")
           }
         }
       }
+      return promise
     }
     return Promise.async {
       suspendCoroutine { continuation ->

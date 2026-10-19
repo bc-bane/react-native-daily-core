@@ -1,0 +1,352 @@
+{
+	"artifacts" : 
+	[
+		{
+			"path" : "/Users/bobcook/AltCode/react-native-daily-js/android/build/intermediates/cxx/Debug/5x516rg5/obj/arm64-v8a/libReactNativeDailyCore.so"
+		}
+	],
+	"backtrace" : 1,
+	"backtraceGraph" : 
+	{
+		"commands" : 
+		[
+			"add_library",
+			"target_link_libraries",
+			"include",
+			"add_definitions",
+			"target_compile_definitions",
+			"include_directories",
+			"target_sources"
+		],
+		"files" : 
+		[
+			"CMakeLists.txt",
+			"/Users/bobcook/AltCode/react-native-daily-js/nitrogen/generated/android/ReactNativeDailyCore+autolinking.cmake"
+		],
+		"nodes" : 
+		[
+			{
+				"file" : 0
+			},
+			{
+				"command" : 0,
+				"file" : 0,
+				"line" : 8,
+				"parent" : 0
+			},
+			{
+				"command" : 2,
+				"file" : 0,
+				"line" : 12,
+				"parent" : 0
+			},
+			{
+				"file" : 1,
+				"parent" : 2
+			},
+			{
+				"command" : 1,
+				"file" : 1,
+				"line" : 67,
+				"parent" : 3
+			},
+			{
+				"command" : 1,
+				"file" : 1,
+				"line" : 76,
+				"parent" : 3
+			},
+			{
+				"command" : 1,
+				"file" : 0,
+				"line" : 20,
+				"parent" : 0
+			},
+			{
+				"command" : 3,
+				"file" : 1,
+				"line" : 17,
+				"parent" : 3
+			},
+			{
+				"command" : 4,
+				"file" : 1,
+				"line" : 47,
+				"parent" : 3
+			},
+			{
+				"command" : 3,
+				"file" : 1,
+				"line" : 20,
+				"parent" : 3
+			},
+			{
+				"command" : 5,
+				"file" : 1,
+				"line" : 23,
+				"parent" : 3
+			},
+			{
+				"command" : 5,
+				"file" : 0,
+				"line" : 14,
+				"parent" : 0
+			},
+			{
+				"command" : 6,
+				"file" : 1,
+				"line" : 30,
+				"parent" : 3
+			}
+		]
+	},
+	"compileGroups" : 
+	[
+		{
+			"compileCommandFragments" : 
+			[
+				{
+					"fragment" : "-g -DANDROID -fdata-sections -ffunction-sections -funwind-tables -fstack-protector-strong -no-canonical-prefixes -D__BIONIC_NO_PAGE_SIZE_MACRO -D_FORTIFY_SOURCE=2 -Wformat -Werror=format-security  -frtti -fexceptions -Wall -Wextra -fstack-protector-all -O1 -g -O2 -fno-limit-debug-info  -fPIC"
+				},
+				{
+					"fragment" : "-std=gnu++20"
+				}
+			],
+			"defines" : 
+			[
+				{
+					"backtrace" : 7,
+					"define" : "BUILDING_REACTNATIVEDAILYCORE_WITH_GENERATED_CMAKE_PROJECT"
+				},
+				{
+					"backtrace" : 8,
+					"define" : "FOLLY_CFG_NO_COROUTINES=1"
+				},
+				{
+					"backtrace" : 8,
+					"define" : "FOLLY_HAVE_CLOCK_GETTIME=1"
+				},
+				{
+					"backtrace" : 8,
+					"define" : "FOLLY_HAVE_PTHREAD=1"
+				},
+				{
+					"backtrace" : 8,
+					"define" : "FOLLY_HAVE_RECVMMSG=1"
+				},
+				{
+					"backtrace" : 8,
+					"define" : "FOLLY_HAVE_XSI_STRERROR_R=1"
+				},
+				{
+					"backtrace" : 8,
+					"define" : "FOLLY_MOBILE=1"
+				},
+				{
+					"backtrace" : 8,
+					"define" : "FOLLY_NO_CONFIG=1"
+				},
+				{
+					"backtrace" : 8,
+					"define" : "FOLLY_USE_LIBCPP=1"
+				},
+				{
+					"backtrace" : 9,
+					"define" : "RN_SERIALIZABLE_STATE"
+				},
+				{
+					"define" : "ReactNativeDailyCore_EXPORTS"
+				}
+			],
+			"includes" : 
+			[
+				{
+					"backtrace" : 10,
+					"path" : "/Users/bobcook/AltCode/react-native-daily-js/android/../nitrogen/generated/shared/c++"
+				},
+				{
+					"backtrace" : 10,
+					"path" : "/Users/bobcook/AltCode/react-native-daily-js/android/../nitrogen/generated/android/c++"
+				},
+				{
+					"backtrace" : 10,
+					"path" : "/Users/bobcook/AltCode/react-native-daily-js/android/../nitrogen/generated/android"
+				},
+				{
+					"backtrace" : 11,
+					"path" : "/Users/bobcook/AltCode/react-native-daily-js/android/src/main/cpp"
+				},
+				{
+					"backtrace" : 4,
+					"isSystem" : true,
+					"path" : "/private/var/folders/97/ymb2mss157d6sgjg30gs0j8m0000gn/T/cursor-sandbox-cache/83d22ceafd4ad6008a38cde98d52e191/gradle/caches/9.4.1/transforms/00e9f838836fbc0e39e2c6aa6eaaebb6/transformed/fbjni-0.7.0/prefab/modules/fbjni/include"
+				},
+				{
+					"backtrace" : 4,
+					"isSystem" : true,
+					"path" : "/private/var/folders/97/ymb2mss157d6sgjg30gs0j8m0000gn/T/cursor-sandbox-cache/83d22ceafd4ad6008a38cde98d52e191/gradle/caches/9.4.1/transforms/892e41b78f62a347e26edf02bde8c06c/transformed/react-android-0.88.0-debug/prefab/modules/jsi/include"
+				},
+				{
+					"backtrace" : 4,
+					"isSystem" : true,
+					"path" : "/Users/bobcook/AltCode/react-native-daily-js/node_modules/react-native-nitro-modules/android/build/headers/nitromodules"
+				},
+				{
+					"backtrace" : 5,
+					"isSystem" : true,
+					"path" : "/private/var/folders/97/ymb2mss157d6sgjg30gs0j8m0000gn/T/cursor-sandbox-cache/83d22ceafd4ad6008a38cde98d52e191/gradle/caches/9.4.1/transforms/892e41b78f62a347e26edf02bde8c06c/transformed/react-android-0.88.0-debug/prefab/modules/reactnative/include"
+				}
+			],
+			"language" : "CXX",
+			"languageStandard" : 
+			{
+				"backtraces" : 
+				[
+					1
+				],
+				"standard" : "20"
+			},
+			"sourceIndexes" : 
+			[
+				0,
+				1,
+				2,
+				3,
+				4,
+				5,
+				6,
+				7
+			],
+			"sysroot" : 
+			{
+				"path" : "/Users/bobcook/Library/Android/sdk/ndk/27.1.12297006/toolchains/llvm/prebuilt/darwin-x86_64/sysroot"
+			}
+		}
+	],
+	"id" : "ReactNativeDailyCore::@6890427a1f51a3e7e1df",
+	"link" : 
+	{
+		"commandFragments" : 
+		[
+			{
+				"fragment" : "-Wl,-z,max-page-size=16384 -Wl,--build-id=sha1 -Wl,--no-rosegment -Wl,--no-undefined-version -Wl,--fatal-warnings -Wl,--no-undefined -Qunused-arguments",
+				"role" : "flags"
+			},
+			{
+				"backtrace" : 4,
+				"fragment" : "/private/var/folders/97/ymb2mss157d6sgjg30gs0j8m0000gn/T/cursor-sandbox-cache/83d22ceafd4ad6008a38cde98d52e191/gradle/caches/9.4.1/transforms/00e9f838836fbc0e39e2c6aa6eaaebb6/transformed/fbjni-0.7.0/prefab/modules/fbjni/libs/android.arm64-v8a/libfbjni.so",
+				"role" : "libraries"
+			},
+			{
+				"backtrace" : 4,
+				"fragment" : "/private/var/folders/97/ymb2mss157d6sgjg30gs0j8m0000gn/T/cursor-sandbox-cache/83d22ceafd4ad6008a38cde98d52e191/gradle/caches/9.4.1/transforms/892e41b78f62a347e26edf02bde8c06c/transformed/react-android-0.88.0-debug/prefab/modules/jsi/libs/android.arm64-v8a/libjsi.so",
+				"role" : "libraries"
+			},
+			{
+				"backtrace" : 4,
+				"fragment" : "/Users/bobcook/AltCode/react-native-daily-js/node_modules/react-native-nitro-modules/android/build/intermediates/cxx/Debug/6w5i4o4i/obj/arm64-v8a/libNitroModules.so",
+				"role" : "libraries"
+			},
+			{
+				"backtrace" : 5,
+				"fragment" : "/private/var/folders/97/ymb2mss157d6sgjg30gs0j8m0000gn/T/cursor-sandbox-cache/83d22ceafd4ad6008a38cde98d52e191/gradle/caches/9.4.1/transforms/892e41b78f62a347e26edf02bde8c06c/transformed/react-android-0.88.0-debug/prefab/modules/reactnative/libs/android.arm64-v8a/libreactnative.so",
+				"role" : "libraries"
+			},
+			{
+				"backtrace" : 6,
+				"fragment" : "/Users/bobcook/Library/Android/sdk/ndk/27.1.12297006/toolchains/llvm/prebuilt/darwin-x86_64/sysroot/usr/lib/aarch64-linux-android/24/liblog.so",
+				"role" : "libraries"
+			},
+			{
+				"backtrace" : 6,
+				"fragment" : "-landroid",
+				"role" : "libraries"
+			},
+			{
+				"fragment" : "-latomic -lm",
+				"role" : "libraries"
+			}
+		],
+		"language" : "CXX",
+		"sysroot" : 
+		{
+			"path" : "/Users/bobcook/Library/Android/sdk/ndk/27.1.12297006/toolchains/llvm/prebuilt/darwin-x86_64/sysroot"
+		}
+	},
+	"name" : "ReactNativeDailyCore",
+	"nameOnDisk" : "libReactNativeDailyCore.so",
+	"paths" : 
+	{
+		"build" : ".",
+		"source" : "."
+	},
+	"sourceGroups" : 
+	[
+		{
+			"name" : "Source Files",
+			"sourceIndexes" : 
+			[
+				0,
+				1,
+				2,
+				3,
+				4,
+				5,
+				6,
+				7
+			]
+		}
+	],
+	"sources" : 
+	[
+		{
+			"backtrace" : 1,
+			"compileGroupIndex" : 0,
+			"path" : "src/main/cpp/cpp-adapter.cpp",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 12,
+			"compileGroupIndex" : 0,
+			"path" : "/Users/bobcook/AltCode/react-native-daily-js/nitrogen/generated/android/ReactNativeDailyCoreOnLoad.cpp",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 12,
+			"compileGroupIndex" : 0,
+			"path" : "/Users/bobcook/AltCode/react-native-daily-js/nitrogen/generated/shared/c++/HybridDailyCallClientBridgeSpec.cpp",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 12,
+			"compileGroupIndex" : 0,
+			"path" : "/Users/bobcook/AltCode/react-native-daily-js/nitrogen/generated/shared/c++/HybridDailyVideoViewSpec.cpp",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 12,
+			"compileGroupIndex" : 0,
+			"path" : "/Users/bobcook/AltCode/react-native-daily-js/nitrogen/generated/shared/c++/views/HybridDailyVideoViewComponent.cpp",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 12,
+			"compileGroupIndex" : 0,
+			"path" : "/Users/bobcook/AltCode/react-native-daily-js/nitrogen/generated/android/c++/JHybridDailyCallClientBridgeSpec.cpp",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 12,
+			"compileGroupIndex" : 0,
+			"path" : "/Users/bobcook/AltCode/react-native-daily-js/nitrogen/generated/android/c++/JHybridDailyVideoViewSpec.cpp",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 12,
+			"compileGroupIndex" : 0,
+			"path" : "/Users/bobcook/AltCode/react-native-daily-js/nitrogen/generated/android/c++/views/JHybridDailyVideoViewStateUpdater.cpp",
+			"sourceGroupIndex" : 0
+		}
+	],
+	"type" : "SHARED_LIBRARY"
+}

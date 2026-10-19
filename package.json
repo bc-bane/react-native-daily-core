@@ -46,6 +46,15 @@
     "url": "git+https://github.com/bc-bane/react-native-daily-core.git",
     "baseUrl": "https://github.com/bc-bane/react-native-daily-core"
   },
+  "codegenConfig": {
+    "name": "ReactNativeDailyCore",
+    "type": "modules",
+    "jsSrcsDir": "src",
+    "android": {
+      "javaPackageName": "com.daily.reactlibrary"
+    },
+    "includesGeneratedCode": true
+  },
   "peerDependencies": {
     "react": ">=19.0.0",
     "react-native": ">=0.82.0"
