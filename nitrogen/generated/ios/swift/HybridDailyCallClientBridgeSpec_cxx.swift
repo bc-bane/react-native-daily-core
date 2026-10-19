@@ -188,4 +188,36 @@ open class HybridDailyCallClientBridgeSpec_cxx {
       return bridge.create_Result_void_(__exceptionPtr)
     }
   }
+  
+  @inline(__always)
+  public final func setAudioLevelListener(listener: bridge.Func_void_double_double_std__string) -> bridge.Result_void_ {
+    do {
+      try self.__implementation.setAudioLevelListener(listener: { () -> (Double, Double, String) -> Void in
+        let __wrappedFunction = bridge.wrap_Func_void_double_double_std__string(listener)
+        return { (__clientId: Double, __audioLevel: Double, __participantId: String) -> Void in
+          __wrappedFunction.call(__clientId, __audioLevel, std.string(__participantId))
+        }
+      }())
+      return bridge.create_Result_void_()
+    } catch (let __error) {
+      let __exceptionPtr = __error.toCpp()
+      return bridge.create_Result_void_(__exceptionPtr)
+    }
+  }
+  
+  @inline(__always)
+  public final func setRemoteAudioLevelsListener(listener: bridge.Func_void_double_std__string) -> bridge.Result_void_ {
+    do {
+      try self.__implementation.setRemoteAudioLevelsListener(listener: { () -> (Double, String) -> Void in
+        let __wrappedFunction = bridge.wrap_Func_void_double_std__string(listener)
+        return { (__clientId: Double, __levelsJson: String) -> Void in
+          __wrappedFunction.call(__clientId, std.string(__levelsJson))
+        }
+      }())
+      return bridge.create_Result_void_()
+    } catch (let __error) {
+      let __exceptionPtr = __error.toCpp()
+      return bridge.create_Result_void_(__exceptionPtr)
+    }
+  }
 }

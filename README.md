@@ -41,7 +41,7 @@ cd ios && pod install
 Rebuild the iOS and Android apps. Autolinking includes this package and its Nitro dependency. Set permissions in the app:
 
 - `Info.plist`: `NSCameraUsageDescription`, `NSMicrophoneUsageDescription`, and `UIBackgroundModes` = `voip` when audio should continue in the background
-- Android: the library manifest already merges camera, microphone, notification, and foreground-service permissions
+- Android: the library manifest already merges camera, microphone, notification, and foreground-service permissions. On API 33+, request `POST_NOTIFICATIONS` at runtime if you want the ongoing-call notification while the app is in the background
 
 Screen sharing does not require the Daily native installation guides.
 
@@ -54,7 +54,7 @@ npx react-native-daily-core setup-ios-screen-share
 cd ios && pod install
 ```
 
-The command adds a `DailyScreenCaptureExtension` target, an App Group of `group.<bundle id>`, and the Info.plist keys `startScreenShare()` reads. Confirm that App Group exists for the bundle id in Xcode (**Signing & Capabilities**) or the Apple Developer portal. Signing uses the development team already set on the app target. Then call `startScreenShare()`.
+The command adds a `DailyScreenCaptureExtension` target, an App Group of `group.<bundle id>`, and the Info.plist keys `startScreenShare()` reads. Confirm that App Group exists for the bundle id in Xcode (**Signing & Capabilities**) or the Apple Developer portal. Signing uses the development team already set on the app target. Then call `startScreenShare()`. On iOS the promise resolves when the system broadcast picker is shown; listen for `systemBroadcastStarted` to know capture actually began.
 
 Apps moving off `@daily-co/react-native-daily-js` should read [MIGRATION.md](MIGRATION.md). That package remains Daily's maintained React Native client.
 
@@ -150,7 +150,7 @@ Native parity: [iOS CallClient](https://reference-ios.daily.co/documentation/dai
 | `subscriptions()`, `subscriptionProfiles()` | Seeded at create when the SDK emits them; updated by `subscriptionsUpdated` / `subscriptionProfilesUpdated`. Camera and microphone on the subscription object; screen on participant media. |
 | `setSubscriptionState(participantId, media)` | `media`: `camera`, `microphone`, `screenVideo`, etc. |
 | `setSubscriptionProfile(participantId, profile)` | Profile name string. |
-| `updatePermissions(participantId, { canSend?, canAdmin? })` | Admin updates may be ignored on native side for some fields. |
+| `updatePermissions(participantId, { hasPresence?, canSend? })` | `canSend` is a list of track names (`camera`, `microphone`, `screenVideo`, `screenAudio`). |
 | `updateRemoteParticipants(updates)` | Batch remote input updates. |
 | `ejectRemoteParticipants(ids)` | Remove remote participants. |
 
@@ -159,23 +159,23 @@ Native parity: [iOS CallClient](https://reference-ios.daily.co/documentation/dai
 | Method | Notes |
 | --- | --- |
 | `sendAppMessage(message, to?)` | `message` must already be JSON text (same as native). Optional `to` participant id; omit to broadcast. |
-| `startScreenShare()` | iOS: ReplayKit system picker after `setup-ios-screen-share`; may emit `systemBroadcastStarted` / `systemBroadcastStopped`. Android: media projection prompt while the app is in the foreground. |
-| `stopScreenShare()` | Android stops the projection foreground service when sharing ends. |
+| `startScreenShare()` | iOS: ReplayKit system picker after `setup-ios-screen-share`; use `systemBroadcastStarted` for when capture begins. Android: media projection prompt while the app is in the foreground; the promise resolves when sharing starts. |
+| `stopScreenShare()` | Android stops the projection foreground service when sharing ends. iOS disables the screen input in the call; the user stops the system broadcast from Control Center or the status bar, which emits `systemBroadcastStopped`. |
 
 ### Recording, live streaming, transcription
 
 | Methods | Events |
 | --- | --- |
-| `startRecording`, `stopRecording`, `updateRecording` | `recordingStarted`, `recordingStopped`, `recordingError` |
-| `startLiveStream`, `stopLiveStream`, `updateLiveStream`, `addLiveStreamingEndpoints` | `liveStreamStarted`, `liveStreamStopped`, `liveStreamError`, `liveStreamWarning` |
+| `startRecording`, `stopRecording` | `recordingStarted`, `recordingStopped`, `recordingError` |
+| `startLiveStream`, `stopLiveStream`, `addLiveStreamingEndpoints` | `liveStreamStarted`, `liveStreamStopped`, `liveStreamError`, `liveStreamWarning` |
 | `startTranscription`, `stopTranscription` | `transcriptionStarted`, `transcriptionStopped`, `transcriptionMessage`, `transcriptionError` |
 
 ### Audio levels and network
 
 | Method / getter | Notes |
 | --- | --- |
-| `startLocalAudioLevelObserver(intervalMs?)`, `stopLocalAudioLevelObserver()` | Emits `localAudioLevel`; opt-in. |
-| `startRemoteParticipantsAudioLevelObserver(intervalMs?)`, `stopRemoteParticipantsAudioLevelObserver()` | Emits `remoteParticipantsAudioLevel`. |
+| `startLocalAudioLevelObserver(intervalMs?)`, `stopLocalAudioLevelObserver()` | Updates `localAudioLevel()`; opt-in. |
+| `startRemoteParticipantsAudioLevelObserver(intervalMs?)`, `stopRemoteParticipantsAudioLevelObserver()` | Updates `remoteParticipantsAudioLevel()`. |
 | `localAudioLevel()`, `remoteParticipantsAudioLevel()` | Read latest values; do not push high-frequency levels into React state. |
 | `networkStats()` | `networkStatsUpdated` |
 | — | `networkConnectionStatusUpdated` carries a `description` string (encoded status). |
@@ -184,7 +184,7 @@ Native parity: [iOS CallClient](https://reference-ios.daily.co/documentation/dai
 
 Register with `call.on(event, handler)` and remove with `call.off(event, handler)` using the **same function reference**. Payload shapes match `CallClientEventMap` in the published types. All events are filtered per client id.
 
-Common events: `callStateUpdated`, `participantJoined`, `participantUpdated`, `participantLeft`, `participantCountsUpdated`, `activeSpeakerChanged`, `inputsUpdated`, `publishingUpdated`, `availableDevicesUpdated`, `subscriptionsUpdated`, `subscriptionProfilesUpdated`, `appMessage`, `appMessageFromRestApi`, `error`, recording/livestream/transcription events, `networkStatsUpdated`, `networkConnectionStatusUpdated`, `localAudioLevel`, `remoteParticipantsAudioLevel`, and on iOS `systemBroadcastStarted` / `systemBroadcastStopped`.
+Common events: `callStateUpdated`, `participantJoined`, `participantUpdated`, `participantLeft`, `participantCountsUpdated`, `activeSpeakerChanged`, `inputsUpdated`, `publishingUpdated`, `availableDevicesUpdated`, `subscriptionsUpdated`, `subscriptionProfilesUpdated`, `appMessage`, `appMessageFromRestApi`, `error`, recording/livestream/transcription events, `networkStatsUpdated`, `networkConnectionStatusUpdated`, and on iOS `systemBroadcastStarted` / `systemBroadcastStopped`. Audio levels update `localAudioLevel()` and `remoteParticipantsAudioLevel()` and are not emitted on every sample.
 
 ---
 

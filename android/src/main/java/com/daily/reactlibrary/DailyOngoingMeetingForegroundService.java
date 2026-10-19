@@ -74,14 +74,14 @@ public class DailyOngoingMeetingForegroundService extends Service {
         if (subtitle == null) {
             subtitle = "You're in a call. Tap to open it.";
         }
+        int icon = R.drawable.ic_daily_videocam_24dp;
         String iconName = intent.getStringExtra(EXTRA_ICON_NAME);
-        if (iconName == null) {
-            iconName = "ic_daily_videocam_24dp";
+        if (iconName != null && !iconName.equals("ic_daily_videocam_24dp")) {
+            int resolved = getResources().getIdentifier(iconName, "drawable", getPackageName());
+            if (resolved != 0) {
+                icon = resolved;
+            }
         }
-        int icon =  getResources().getIdentifier(
-                iconName,
-                "drawable",
-                getPackageName());
 
         PendingIntent pendingIntent = null;
         if (activityClassToOpenFromNotification != null) {

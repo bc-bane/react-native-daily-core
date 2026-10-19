@@ -1,10 +1,14 @@
 package com.margelo.nitro.daily.reactlibrary
 
+import com.daily.reactlibrary.AudioLevelSink
 import com.daily.reactlibrary.DailyClientRegistry
+import com.daily.reactlibrary.RemoteAudioLevelsSink
 import com.daily.reactlibrary.EventSink
 import com.daily.reactlibrary.OnceCallback
 import com.daily.reactlibrary.DailyRuntime
 import com.daily.reactlibrary.startScreenShareFromActivity
+import android.os.Handler
+import android.os.Looper
 import com.facebook.proguard.annotations.DoNotStrip
 import com.margelo.nitro.core.Promise
 import org.json.JSONObject
@@ -15,6 +19,7 @@ import kotlin.coroutines.suspendCoroutine
 @DoNotStrip
 class HybridDailyCallClientBridge : HybridDailyCallClientBridgeSpec() {
   private val listenerOwner = Any()
+  private val mainHandler = Handler(Looper.getMainLooper())
 
   override fun createClient(): Promise<Double> {
     return Promise.async {
@@ -43,20 +48,19 @@ class HybridDailyCallClientBridge : HybridDailyCallClientBridgeSpec() {
       }
       return Promise.async {
         suspendCoroutine { continuation ->
-          val once = OnceCallback { json, error ->
+          startScreenShareFromActivity(activity, clientId.toInt()) { json, error ->
             if (error != null) {
               continuation.resumeWithException(IllegalStateException(error))
             } else {
               continuation.resume(json ?: "{}")
             }
           }
-          startScreenShareFromActivity(activity, clientId.toInt(), once::call)
         }
       }
     }
     return Promise.async {
       suspendCoroutine { continuation ->
-        val once = OnceCallback { json, error ->
+        val once = OnceCallback(mainHandler) { json, error ->
           if (error != null) {
             continuation.resumeWithException(IllegalStateException(error))
           } else {
@@ -83,8 +87,27 @@ class HybridDailyCallClientBridge : HybridDailyCallClientBridgeSpec() {
     )
   }
 
+  override fun setAudioLevelListener(listener: (clientId: Double, audioLevel: Double, participantId: String) -> Unit) {
+    DailyClientRegistry.setAudioLevelListener(
+      listenerOwner,
+      AudioLevelSink { clientId, audioLevel, participantId ->
+        listener(clientId.toDouble(), audioLevel, participantId)
+      },
+    )
+  }
+
+  override fun setRemoteAudioLevelsListener(listener: (clientId: Double, levelsJson: String) -> Unit) {
+    DailyClientRegistry.setRemoteAudioLevelsListener(
+      listenerOwner,
+      RemoteAudioLevelsSink { clientId, levelsJson ->
+        listener(clientId.toDouble(), levelsJson)
+      },
+    )
+  }
+
   override fun dispose() {
     super.dispose()
     DailyClientRegistry.clearEventListener(listenerOwner)
+    DailyClientRegistry.clearAudioLevelListener(listenerOwner)
   }
 }

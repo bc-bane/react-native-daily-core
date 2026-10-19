@@ -18,6 +18,8 @@ namespace margelo::nitro::daily { struct DailyCallClientEvent; }
 #include "JFunc_void_DailyCallClientEvent.hpp"
 #include <NitroModules/JNICallable.hpp>
 #include "JDailyCallClientEvent.hpp"
+#include "JFunc_void_double_double_std__string.hpp"
+#include "JFunc_void_double_std__string.hpp"
 
 namespace margelo::nitro::daily {
 
@@ -91,6 +93,14 @@ namespace margelo::nitro::daily {
   void JHybridDailyCallClientBridgeSpec::setEventListener(const std::function<void(const DailyCallClientEvent& /* event */)>& listener) {
     static const auto method = _javaPart->javaClassStatic()->getMethod<void(jni::alias_ref<JFunc_void_DailyCallClientEvent::javaobject> /* listener */)>("setEventListener_cxx");
     method(_javaPart, JFunc_void_DailyCallClientEvent_cxx::fromCpp(listener));
+  }
+  void JHybridDailyCallClientBridgeSpec::setAudioLevelListener(const std::function<void(double /* clientId */, double /* audioLevel */, const std::string& /* participantId */)>& listener) {
+    static const auto method = _javaPart->javaClassStatic()->getMethod<void(jni::alias_ref<JFunc_void_double_double_std__string::javaobject> /* listener */)>("setAudioLevelListener_cxx");
+    method(_javaPart, JFunc_void_double_double_std__string_cxx::fromCpp(listener));
+  }
+  void JHybridDailyCallClientBridgeSpec::setRemoteAudioLevelsListener(const std::function<void(double /* clientId */, const std::string& /* levelsJson */)>& listener) {
+    static const auto method = _javaPart->javaClassStatic()->getMethod<void(jni::alias_ref<JFunc_void_double_std__string::javaobject> /* listener */)>("setRemoteAudioLevelsListener_cxx");
+    method(_javaPart, JFunc_void_double_std__string_cxx::fromCpp(listener));
   }
 
 } // namespace margelo::nitro::daily

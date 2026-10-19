@@ -67,11 +67,44 @@ public class HybridDailyCallClientBridge: HybridDailyCallClientBridgeSpec_base, 
     }
   }
 
+  public func setAudioLevelListener(listener: @escaping (Double, Double, String) -> Void) throws {
+    let owner = listenerOwner
+    let assign = {
+      MainActor.assumeIsolated {
+        DailyClientRegistry.shared.setAudioLevelListener(owner: owner) { clientId, audioLevel, participantId in
+          listener(clientId.doubleValue, audioLevel.doubleValue, participantId as String)
+        }
+      }
+    }
+    if Thread.isMainThread {
+      assign()
+    } else {
+      DispatchQueue.main.async(execute: assign)
+    }
+  }
+
+  public func setRemoteAudioLevelsListener(listener: @escaping (Double, String) -> Void) throws {
+    let owner = listenerOwner
+    let assign = {
+      MainActor.assumeIsolated {
+        DailyClientRegistry.shared.setRemoteAudioLevelsListener(owner: owner) { clientId, levelsJson in
+          listener(clientId.doubleValue, levelsJson as String)
+        }
+      }
+    }
+    if Thread.isMainThread {
+      assign()
+    } else {
+      DispatchQueue.main.async(execute: assign)
+    }
+  }
+
   public func dispose() {
     let owner = listenerOwner
     let clear = {
       MainActor.assumeIsolated {
         DailyClientRegistry.shared.clearEventListener(owner: owner)
+        DailyClientRegistry.shared.clearAudioLevelListener(owner: owner)
       }
     }
     if Thread.isMainThread {

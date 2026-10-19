@@ -56,6 +56,8 @@ namespace margelo::nitro::daily {
       virtual void destroyClient(double clientId) = 0;
       virtual std::shared_ptr<Promise<std::string>> perform(double clientId, const std::string& action, const std::string& payloadJson) = 0;
       virtual void setEventListener(const std::function<void(const DailyCallClientEvent& /* event */)>& listener) = 0;
+      virtual void setAudioLevelListener(const std::function<void(double /* clientId */, double /* audioLevel */, const std::string& /* participantId */)>& listener) = 0;
+      virtual void setRemoteAudioLevelsListener(const std::function<void(double /* clientId */, const std::string& /* levelsJson */)>& listener) = 0;
 
     protected:
       // Hybrid Setup

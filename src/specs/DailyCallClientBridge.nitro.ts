@@ -16,4 +16,10 @@ export interface DailyCallClientBridge
     payloadJson: string,
   ): Promise<string>;
   setEventListener(listener: (event: DailyCallClientEvent) => void): void;
+  setAudioLevelListener(
+    listener: (clientId: number, audioLevel: number, participantId: string) => void,
+  ): void;
+  setRemoteAudioLevelsListener(
+    listener: (clientId: number, levelsJson: string) => void,
+  ): void;
 }

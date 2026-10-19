@@ -71,10 +71,29 @@ internal fun interface EventSink {
   fun emit(clientId: Int, type: String, payloadJson: String)
 }
 
-internal class OnceCallback(callback: (String?, String?) -> Unit) {
+internal fun interface AudioLevelSink {
+  fun emit(clientId: Int, audioLevel: Double, participantId: String)
+}
+
+internal fun interface RemoteAudioLevelsSink {
+  fun emit(clientId: Int, levelsJson: String)
+}
+
+internal class OnceCallback(
+  private val handler: Handler,
+  callback: (String?, String?) -> Unit,
+) {
   private val callback = java.util.concurrent.atomic.AtomicReference(callback)
+  private val timeout = Runnable {
+    call(null, "CallClient action did not finish")
+  }
+
+  init {
+    handler.postDelayed(timeout, 30_000L)
+  }
 
   fun call(json: String?, error: String?) {
+    handler.removeCallbacks(timeout)
     callback.getAndSet(null)?.invoke(json, error)
   }
 }
@@ -85,6 +104,10 @@ internal object DailyClientRegistry {
   private val clients = HashMap<Int, ClientBox>()
   var eventSink: EventSink? = null
   private var eventListenerOwner: Any? = null
+  var audioLevelSink: AudioLevelSink? = null
+  private var audioLevelOwner: Any? = null
+  var remoteAudioLevelsSink: RemoteAudioLevelsSink? = null
+  private var remoteAudioLevelsOwner: Any? = null
 
   fun setEventListener(owner: Any, sink: EventSink) {
     postToMain {
@@ -106,6 +129,37 @@ internal object DailyClientRegistry {
     postToMain {
       eventListenerOwner = null
       eventSink = null
+      audioLevelOwner = null
+      audioLevelSink = null
+      remoteAudioLevelsOwner = null
+      remoteAudioLevelsSink = null
+    }
+  }
+
+  fun setAudioLevelListener(owner: Any, sink: AudioLevelSink) {
+    postToMain {
+      audioLevelOwner = owner
+      audioLevelSink = sink
+    }
+  }
+
+  fun clearAudioLevelListener(owner: Any) {
+    postToMain {
+      if (audioLevelOwner === owner) {
+        audioLevelOwner = null
+        audioLevelSink = null
+      }
+      if (remoteAudioLevelsOwner === owner) {
+        remoteAudioLevelsOwner = null
+        remoteAudioLevelsSink = null
+      }
+    }
+  }
+
+  fun setRemoteAudioLevelsListener(owner: Any, sink: RemoteAudioLevelsSink) {
+    postToMain {
+      remoteAudioLevelsOwner = owner
+      remoteAudioLevelsSink = sink
     }
   }
 
@@ -128,13 +182,44 @@ internal object DailyClientRegistry {
     main.post {
       val ids = clients.keys.toList()
       ids.forEach { destroyOnMain(it) }
+      cancelPendingScreenShare(null)
     }
   }
 
   private fun destroyOnMain(clientId: Int) {
+    cancelPendingScreenShare(clientId)
     clients.remove(clientId)?.client?.release()
     scheduleRefreshAll()
     syncOngoingCall()
+  }
+
+  fun cancelPendingScreenShare(clientId: Int?, reason: String = "CallClient was released") {
+    val pending = DailyRuntime.pendingScreenShare ?: return
+    if (clientId != null && pending.clientId != clientId) {
+      return
+    }
+    DailyRuntime.pendingScreenShare = null
+    DailyRuntime.applicationContextOrNull()?.let { DailyScreenShareForegroundService.stop(it) }
+    pending.callback(null, reason)
+  }
+
+  fun onScreenShareServiceStarted(ok: Boolean): Boolean {
+    val pending = DailyRuntime.pendingScreenShare
+    if (!ok || pending == null) {
+      if (pending != null) {
+        DailyRuntime.pendingScreenShare = null
+        pending.callback(null, "Screen share foreground service failed to start")
+      }
+      return false
+    }
+    DailyRuntime.pendingScreenShare = null
+    val capture = pending.captureIntent
+    if (capture == null) {
+      pending.callback(null, "Screen share foreground service failed to start")
+      return false
+    }
+    startScreenShare(pending.clientId, capture, pending.callback)
+    return true
   }
 
   fun scheduleRefreshAll() {
@@ -147,6 +232,29 @@ internal object DailyClientRegistry {
 
   fun client(clientId: Int): CallClient? = clients[clientId]?.client
 
+  fun startScreenShare(clientId: Int, intent: Intent, callback: (String?, String?) -> Unit) {
+    val once = OnceCallback(main, callback)
+    val box = clients[clientId]
+    if (box == null) {
+      DailyRuntime.applicationContextOrNull()?.let { DailyScreenShareForegroundService.stop(it) }
+      once.call(null, "CallClient was released")
+      return
+    }
+    if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.Q &&
+      !DailyScreenShareForegroundService.isForegroundActive()
+    ) {
+      DailyRuntime.applicationContextOrNull()?.let { DailyScreenShareForegroundService.stop(it) }
+      once.call(null, "Screen share foreground service failed to start")
+      return
+    }
+    box.startScreenShare(intent) { json, error ->
+      if (error != null) {
+        DailyRuntime.applicationContextOrNull()?.let { DailyScreenShareForegroundService.stop(it) }
+      }
+      once.call(json, error)
+    }
+  }
+
   fun videoTrack(clientId: Int, participantId: String, source: String): co.daily.model.MediaStreamTrack? {
     val client = client(clientId) ?: return null
     val participant = client.participants().all.values.firstOrNull { it.id.uuid.toString() == participantId }
@@ -155,7 +263,7 @@ internal object DailyClientRegistry {
   }
 
   fun perform(clientId: Int, action: String, payload: JSONObject, callback: (String?, String?) -> Unit) {
-    val once = OnceCallback(callback)
+    val once = OnceCallback(main, callback)
     main.post {
       val box = clients[clientId]
       if (box == null) {
@@ -220,7 +328,7 @@ private class ClientBox(
         participantId(payload.getString("participantId")),
         SubscriptionProfile(payload.getString("profile")),
       ) { finish(it.error?.msg, callback) }
-      "updatePermissions" -> client.updatePermissions(permissions(payload)) { finish(it.error?.msg, callback) }
+      "updatePermissions" -> updatePermissions(payload, callback)
       "updateRemoteParticipants" -> updateRemotes(payload, callback)
       "ejectRemoteParticipants" -> client.ejectRemoteParticipants(idList(payload.getJSONArray("ids"))) { finish(it.error?.msg, callback) }
       "sendAppMessage" -> client.sendAppMessage(jsonForAppMessage(payload.getString("message")), recipient(payload)) { finish(it.error?.msg, callback) }
@@ -238,16 +346,8 @@ private class ClientBox(
         if (error != null) callback(null, error) else callback(JSONObject().put("streamId", result.success?.id?.toString() ?: "").toString(), null)
       }
       "stopRecording" -> client.stopRecording(streamId(payload.optStringOrNull("streamId"))) { finish(it.error?.msg, callback) }
-      "updateRecording" -> client.updateRecording(
-        streamingSettings = co.daily.model.streaming.StreamingUpdateSettings(),
-        streamId = streamId(payload.optStringOrNull("streamId")),
-      ) { finish(it.error?.msg, callback) }
       "startLiveStream" -> startLiveStream(payload, callback)
       "stopLiveStream" -> client.stopLiveStream(streamId(payload.optStringOrNull("streamId"))) { finish(it.error?.msg, callback) }
-      "updateLiveStream" -> client.updateLiveStream(
-        co.daily.model.streaming.StreamingUpdateSettings(),
-        streamId(payload.optStringOrNull("streamId")),
-      ) { finish(it.error?.msg, callback) }
       "addLiveStreamingEndpoints" -> {
         val endpoints = endpoints(payload)
         if (endpoints !is LiveStreamEndpoints.Preconfigured) {
@@ -349,6 +449,22 @@ private class ClientBox(
       microphone = payload.optStringOrNull("microphone")?.let { subscriptionState(it) },
       screenVideo = payload.optStringOrNull("screenVideo")?.let { subscriptionState(it) },
       screenAudio = payload.optStringOrNull("screenAudio")?.let { subscriptionState(it) },
+    ) { finish(it.error?.msg, callback) }
+  }
+
+  private fun updatePermissions(payload: JSONObject, callback: (String?, String?) -> Unit) {
+    val id = payload.optStringOrNull("participantId")
+    if (id == null) {
+      callback(null, "A participant id is required")
+      return
+    }
+    val localId = client.participants().local.id.uuid.toString()
+    if (id.equals(localId, ignoreCase = true)) {
+      client.updatePermissions(permissions(payload)) { finish(it.error?.msg, callback) }
+      return
+    }
+    client.updateRemoteParticipants(
+      mapOf(participantId(id) to RemoteParticipantUpdate(permissions(payload), null)),
     ) { finish(it.error?.msg, callback) }
   }
 
@@ -464,13 +580,15 @@ private class ClientBox(
   }
 
   override fun onLocalAudioLevel(audioLevel: Float) {
-    emit("localAudioLevel", JSONObject().put("audioLevel", audioLevel.toDouble()))
+    DailyClientRegistry.audioLevelSink?.emit(clientId, audioLevel.toDouble(), "")
   }
 
   override fun onRemoteParticipantsAudioLevel(participantsAudioLevel: Map<ParticipantId, Float>) {
     val json = JSONObject()
-    participantsAudioLevel.forEach { (id, level) -> json.put(id.uuid.toString(), level.toDouble()) }
-    emit("remoteParticipantsAudioLevel", json)
+    participantsAudioLevel.forEach { (id, level) ->
+      json.put(id.uuid.toString(), level.toDouble())
+    }
+    DailyClientRegistry.remoteAudioLevelsSink?.emit(clientId, json.toString())
   }
 
   override fun onSubscriptionsUpdated(subscriptions: Map<ParticipantId, SubscriptionSettings>) {
@@ -810,7 +928,11 @@ internal fun startScreenShareFromActivity(activity: Activity, clientId: Int, cal
     if (superseded != null) {
       superseded.callback(null, "Superseded by another screen share request")
     }
-    DailyRuntime.pendingScreenShare = PendingScreenShare(clientId, callback)
+    if (DailyRuntime.applicationContextOrNull() == null) {
+      callback(null, "CallClient module is not initialized")
+      return@postToMain
+    }
+    DailyRuntime.pendingScreenShare = PendingScreenShare(clientId, callback, null)
     val manager = activity.getSystemService(Context.MEDIA_PROJECTION_SERVICE) as MediaProjectionManager
     activity.startActivityForResult(
       manager.createScreenCaptureIntent(),
@@ -830,4 +952,5 @@ private fun CallState.toJsValue(): String = when (this) {
 data class PendingScreenShare(
   val clientId: Int,
   val callback: (String?, String?) -> Unit,
+  var captureIntent: Intent?,
 )

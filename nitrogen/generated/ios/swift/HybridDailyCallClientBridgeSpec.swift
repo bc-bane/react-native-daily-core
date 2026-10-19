@@ -17,6 +17,8 @@ public protocol HybridDailyCallClientBridgeSpec_protocol: HybridObject {
   func destroyClient(clientId: Double) throws -> Void
   func perform(clientId: Double, action: String, payloadJson: String) throws -> Promise<String>
   func setEventListener(listener: @escaping (_ event: DailyCallClientEvent) -> Void) throws -> Void
+  func setAudioLevelListener(listener: @escaping (_ clientId: Double, _ audioLevel: Double, _ participantId: String) -> Void) throws -> Void
+  func setRemoteAudioLevelsListener(listener: @escaping (_ clientId: Double, _ levelsJson: String) -> Void) throws -> Void
 }
 
 public extension HybridDailyCallClientBridgeSpec_protocol {

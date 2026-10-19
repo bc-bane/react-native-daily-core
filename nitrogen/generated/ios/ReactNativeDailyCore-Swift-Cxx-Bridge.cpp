@@ -47,6 +47,22 @@ namespace margelo::nitro::daily::bridge::swift {
     };
   }
   
+  // pragma MARK: std::function<void(double /* clientId */, double /* audioLevel */, const std::string& /* participantId */)>
+  Func_void_double_double_std__string create_Func_void_double_double_std__string(void* NON_NULL swiftClosureWrapper) noexcept {
+    auto swiftClosure = ReactNativeDailyCore::Func_void_double_double_std__string::fromUnsafe(swiftClosureWrapper);
+    return [swiftClosure = std::move(swiftClosure)](double clientId, double audioLevel, const std::string& participantId) mutable -> void {
+      swiftClosure.call(clientId, audioLevel, participantId);
+    };
+  }
+  
+  // pragma MARK: std::function<void(double /* clientId */, const std::string& /* levelsJson */)>
+  Func_void_double_std__string create_Func_void_double_std__string(void* NON_NULL swiftClosureWrapper) noexcept {
+    auto swiftClosure = ReactNativeDailyCore::Func_void_double_std__string::fromUnsafe(swiftClosureWrapper);
+    return [swiftClosure = std::move(swiftClosure)](double clientId, const std::string& levelsJson) mutable -> void {
+      swiftClosure.call(clientId, levelsJson);
+    };
+  }
+  
   // pragma MARK: std::shared_ptr<HybridDailyCallClientBridgeSpec>
   std::shared_ptr<HybridDailyCallClientBridgeSpec> create_std__shared_ptr_HybridDailyCallClientBridgeSpec_(void* NON_NULL swiftUnsafePointer) noexcept {
     ReactNativeDailyCore::HybridDailyCallClientBridgeSpec_cxx swiftPart = ReactNativeDailyCore::HybridDailyCallClientBridgeSpec_cxx::fromUnsafe(swiftUnsafePointer);

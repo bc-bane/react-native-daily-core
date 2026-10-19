@@ -1,6 +1,8 @@
 import {
   getNativeDailyCallClientModule,
+  subscribeDailyAudioLevels,
   subscribeDailyCallClientEvents,
+  subscribeDailyRemoteAudioLevels,
 } from './NitroDailyCallClient';
 import type {
   AvailableDevices,
@@ -29,12 +31,6 @@ import type {
 } from './types';
 
 type Handler<T> = (payload: T) => void;
-
-interface NativeEvent {
-  clientId: number;
-  type: CallClientEventName;
-  payloadJson: string;
-}
 
 const emptyInputs = (): InputSettings => ({
   camera: {isEnabled: false},
@@ -79,17 +75,29 @@ export class CallClient {
   private subscriptionProfilesValue: SubscriptionProfiles = {};
   private readonly listeners = new Map<string, Set<Handler<never>>>();
   private readonly subscription;
+  private readonly audioLevels;
+  private readonly remoteAudioLevels;
 
   private constructor(clientId: number) {
     this.clientId = clientId;
     this.subscription = subscribeDailyCallClientEvents(event => {
-      if (this.destroyed || event.clientId !== this.clientId) {
+      if (this.destroyed || event.clientId !== this.clientId || event.payload == null) {
         return;
       }
-      const nativeEvent = event as NativeEvent;
-      const payload = nativeEvent.payloadJson ? JSON.parse(nativeEvent.payloadJson) : {};
-      this.applyEvent(nativeEvent.type, payload);
-      this.emit(nativeEvent.type, payload);
+      this.applyEvent(event.type as CallClientEventName, event.payload);
+      this.emit(event.type, event.payload);
+    });
+    this.audioLevels = subscribeDailyAudioLevels(level => {
+      if (this.destroyed || level.clientId !== this.clientId || level.participantId) {
+        return;
+      }
+      this.localAudioLevelValue = level.audioLevel;
+    });
+    this.remoteAudioLevels = subscribeDailyRemoteAudioLevels(update => {
+      if (this.destroyed || update.clientId !== this.clientId) {
+        return;
+      }
+      this.remoteAudioLevelsValue = update.levels;
     });
   }
 
@@ -198,6 +206,8 @@ export class CallClient {
     this.destroyed = true;
     this.performGeneration += 1;
     this.subscription.remove();
+    this.audioLevels.remove();
+    this.remoteAudioLevels.remove();
     getNativeDailyCallClientModule().destroyClient(this.clientId);
   }
 
@@ -270,8 +280,10 @@ export class CallClient {
   updatePermissions(
     participantId: string,
     permissions: {
-      canSend?: boolean;
-      canAdmin?: boolean;
+      hasPresence?: boolean;
+      canSend?: Array<
+        'camera' | 'microphone' | 'screenVideo' | 'screenAudio' | 'customVideo' | 'customAudio'
+      >;
     },
   ): Promise<void> {
     return this.perform('updatePermissions', {participantId, ...permissions}).then(
@@ -321,12 +333,6 @@ export class CallClient {
     );
   }
 
-  updateRecording(streamId?: string): Promise<void> {
-    return this.perform('updateRecording', {streamId: streamId ?? null}).then(
-      () => undefined,
-    );
-  }
-
   startLiveStream(options: LiveStreamStartOptions): Promise<{streamId: string}> {
     return this.perform('startLiveStream', options).then(
       result => result as {streamId: string},
@@ -335,12 +341,6 @@ export class CallClient {
 
   stopLiveStream(streamId?: string): Promise<void> {
     return this.perform('stopLiveStream', {streamId: streamId ?? null}).then(
-      () => undefined,
-    );
-  }
-
-  updateLiveStream(streamId?: string): Promise<void> {
-    return this.perform('updateLiveStream', {streamId: streamId ?? null}).then(
       () => undefined,
     );
   }
@@ -445,7 +445,9 @@ export class CallClient {
         const all = {...this.participantsValue.all};
         delete all[left.participant.id];
         this.participantsValue = {
-          ...this.participantsValue,
+          local: left.participant.info.isLocal
+            ? left.participant
+            : this.participantsValue.local,
           all,
         };
         break;

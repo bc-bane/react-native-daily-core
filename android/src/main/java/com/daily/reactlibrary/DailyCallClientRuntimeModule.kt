@@ -2,17 +2,20 @@ package com.daily.reactlibrary
 
 import android.app.Activity
 import android.content.Intent
+import com.facebook.react.bridge.LifecycleEventListener
 import com.facebook.react.bridge.ReactApplicationContext
 import com.facebook.react.bridge.ActivityEventListener
 import com.facebook.react.bridge.ReactContextBaseJavaModule
 
 class DailyCallClientRuntimeModule(reactContext: ReactApplicationContext) :
-  ReactContextBaseJavaModule(reactContext),
-  ActivityEventListener {
+    ReactContextBaseJavaModule(reactContext),
+    ActivityEventListener,
+    LifecycleEventListener {
 
   init {
     DailyRuntime.attach(reactContext.applicationContext) { reactContext.currentActivity }
     reactContext.addActivityEventListener(this)
+    reactContext.addLifecycleEventListener(this)
   }
 
   override fun getName(): String = NAME
@@ -30,7 +33,16 @@ class DailyCallClientRuntimeModule(reactContext: ReactApplicationContext) :
 
   override fun onNewIntent(intent: Intent?) {}
 
+  override fun onHostResume() {}
+
+  override fun onHostPause() {}
+
+  override fun onHostDestroy() {
+    DailyClientRegistry.cancelPendingScreenShare(null, "Screen share was cancelled")
+  }
+
   override fun invalidate() {
+    reactApplicationContext.removeLifecycleEventListener(this)
     DailyClientRegistry.destroyAll()
     DailyClientRegistry.clearEventListener()
     DailyRuntime.detach()

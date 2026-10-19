@@ -2,9 +2,13 @@ const fs = require('fs');
 const path = require('path');
 const plist = require('plist');
 const xcode = require('xcode');
+const pbxFile = require('xcode/lib/pbxFile');
 
 const TARGET_NAME = 'DailyScreenCaptureExtension';
-const BROADCAST_POD_VERSION = '0.40.0';
+const podspecPath = path.join(__dirname, '..', 'react-native-daily-core.podspec');
+const podspecContents = fs.readFileSync(podspecPath, 'utf8');
+const broadcastPodMatch = podspecContents.match(/DailySystemBroadcast",\s*"([^"]+)"/);
+const BROADCAST_POD_VERSION = broadcastPodMatch ? broadcastPodMatch[1] : '0.40.0';
 
 function screenShareIdentity(bundleId) {
   if (!bundleId || bundleId.includes('$')) {
@@ -48,10 +52,16 @@ function ensureExtensionTarget(project, identity) {
       identity.extensionBundleId,
     );
     targetUuid = created.uuid;
-    const group = project.addPbxGroup(
-      [`${identity.targetName}-Info.plist`, `${identity.targetName}.entitlements`],
-      identity.targetName,
-      identity.targetName,
+    const group = project.addPbxGroup([], identity.targetName, identity.targetName);
+    addFileReferenceOnly(
+      project,
+      `${identity.targetName}/${identity.targetName}-Info.plist`,
+      group.uuid,
+    );
+    addFileReferenceOnly(
+      project,
+      `${identity.targetName}/${identity.targetName}.entitlements`,
+      group.uuid,
     );
     project.addToPbxGroup(group.uuid, project.getFirstProject().firstProject.mainGroup);
     project.addBuildPhase([], 'PBXSourcesBuildPhase', 'Sources', targetUuid);
@@ -89,8 +99,42 @@ function ensureExtensionTarget(project, identity) {
   if (!alreadyDepends) {
     project.addTargetDependency(appTarget, [targetUuid]);
   }
+  stripExtensionPlistsFromResourcePhases(project, targetUuid);
   stripUndefined(project.hash);
   return targetUuid;
+}
+
+function addFileReferenceOnly(project, filePath, groupUuid) {
+  const file = new pbxFile(filePath);
+  file.uuid = project.generateUuid();
+  file.fileRef = project.generateUuid();
+  project.addToPbxFileReferenceSection(file);
+  const group = project.hash.project.objects.PBXGroup[groupUuid];
+  if (!Array.isArray(group.children)) {
+    group.children = [];
+  }
+  group.children.push({
+    value: file.fileRef,
+    comment: path.basename(filePath),
+  });
+}
+
+function stripExtensionPlistsFromResourcePhases(project, targetUuid) {
+  const objects = project.hash.project.objects;
+  const target = objects.PBXNativeTarget[targetUuid];
+  if (!target || !Array.isArray(target.buildPhases)) {
+    return;
+  }
+  for (const phaseRef of target.buildPhases) {
+    const phase = objects.PBXResourcesBuildPhase?.[phaseRef.value];
+    if (!phase || !Array.isArray(phase.files)) {
+      continue;
+    }
+    phase.files = phase.files.filter(entry => {
+      const comment = String(entry.comment || '');
+      return !comment.endsWith('-Info.plist') && !comment.endsWith('.entitlements');
+    });
+  }
 }
 
 function stripUndefined(value) {
@@ -122,17 +166,25 @@ function applyEntitlements(entitlements, identity) {
   return entitlements;
 }
 
+function podfileFrameworksSnippet(contents) {
+  const lines = [];
+  const matches = contents.match(/^\s*use_frameworks!.*$/gm);
+  if (matches) {
+    matches.forEach(line => lines.push(`  ${line.trim()}`));
+  }
+  return [...new Set(lines)].join('\n');
+}
+
 function podfileWithExtension(contents) {
   if (contents.includes(`target '${TARGET_NAME}'`)) {
     return contents;
   }
-  const frameworks = contents.includes('podfile_properties')
-    ? "  use_frameworks! :linkage => podfile_properties['ios.useFrameworks'].to_sym if podfile_properties['ios.useFrameworks']\n  use_frameworks! :linkage => ENV['USE_FRAMEWORKS'].to_sym if ENV['USE_FRAMEWORKS']\n"
-    : '';
+  const frameworks = podfileFrameworksSnippet(contents);
+  const frameworksBlock = frameworks ? `${frameworks}\n` : '';
   return `${contents.trimEnd()}
 
 target '${TARGET_NAME}' do
-${frameworks}  pod 'DailySystemBroadcast', '${BROADCAST_POD_VERSION}'
+${frameworksBlock}  pod 'DailySystemBroadcast', '${BROADCAST_POD_VERSION}'
 end
 `;
 }
@@ -203,9 +255,28 @@ function updateAppInfoPlist(project, iosRoot, identity) {
     throw new Error('The iOS app target has no INFOPLIST_FILE build setting.');
   }
   const infoPath = path.join(iosRoot, infoRelative);
-  const parsed = plist.parse(fs.readFileSync(infoPath, 'utf8'));
-  applyInfoPlist(parsed, identity);
-  fs.writeFileSync(infoPath, plist.build(parsed));
+  patchInfoPlistKeys(infoPath, identity);
+}
+
+function patchInfoPlistKeys(infoPath, identity) {
+  let text = fs.readFileSync(infoPath, 'utf8');
+  text = upsertPlistStringKey(text, 'RTCAppGroupIdentifier', identity.appGroup);
+  text = upsertPlistStringKey(
+    text,
+    'DailyScreenCaptureExtensionBundleIdentifier',
+    identity.extensionBundleId,
+  );
+  fs.writeFileSync(infoPath, text);
+}
+
+function upsertPlistStringKey(text, key, value) {
+  const escaped = value.replace(/&/g, '&amp;').replace(/</g, '&lt;');
+  const block = new RegExp(`<key>${key}</key>\\s*<string>[^<]*</string>`, 'm');
+  const entry = `\t<key>${key}</key>\n\t<string>${escaped}</string>`;
+  if (block.test(text)) {
+    return text.replace(block, entry);
+  }
+  return text.replace(/(\s*)<\/dict>(\s*<\/plist>)/, `$1${entry}\n$1</dict>$2`);
 }
 
 function updateAppEntitlements(project, iosRoot, identity) {

@@ -73,16 +73,6 @@ export function CallScreen({
     const onActive = (event: {participant: Participant | null}) => {
       setActiveSpeakerId(event.participant?.id ?? null);
     };
-    const onLocalLevel = (event: {audioLevel: number}) => {
-      const id = client.participants().local?.id;
-      if (!id) {
-        return;
-      }
-      setLevels(current => ({...current, [id]: event.audioLevel}));
-    };
-    const onRemoteLevel = (event: {[id: string]: number}) => {
-      setLevels(current => ({...current, ...event}));
-    };
     const onInputs = (event: {
       microphone: {isEnabled: boolean};
       camera: {isEnabled: boolean};
@@ -136,8 +126,6 @@ export function CallScreen({
     const onTranscriptionError = (event: {message: string}) => setCloudStatus(dailyMessage(event.message));
     client.on('error', onError);
     client.on('activeSpeakerChanged', onActive);
-    client.on('localAudioLevel', onLocalLevel);
-    client.on('remoteParticipantsAudioLevel', onRemoteLevel);
     client.on('inputsUpdated', onInputs);
     client.on('availableDevicesUpdated', onDevices);
     client.on('networkStatsUpdated', setNetwork);
@@ -156,8 +144,6 @@ export function CallScreen({
     return () => {
       client.off('error', onError);
       client.off('activeSpeakerChanged', onActive);
-      client.off('localAudioLevel', onLocalLevel);
-      client.off('remoteParticipantsAudioLevel', onRemoteLevel);
       client.off('inputsUpdated', onInputs);
       client.off('availableDevicesUpdated', onDevices);
       client.off('networkStatsUpdated', setNetwork);
@@ -174,6 +160,33 @@ export function CallScreen({
       client.off('transcriptionError', onTranscriptionError);
       client.off('transcriptionMessage', onCaption);
     };
+  }, [client]);
+
+  useEffect(() => {
+    let frame = 0;
+    const sample = () => {
+      const localId = client.participants().local?.id;
+      const next: {[id: string]: number} = {
+        ...client.remoteParticipantsAudioLevel(),
+      };
+      if (localId) {
+        next[localId] = client.localAudioLevel();
+      }
+      setLevels(current => {
+        const currentIds = Object.keys(current);
+        const nextIds = Object.keys(next);
+        if (
+          currentIds.length === nextIds.length &&
+          nextIds.every(id => current[id] === next[id])
+        ) {
+          return current;
+        }
+        return next;
+      });
+      frame = requestAnimationFrame(sample);
+    };
+    frame = requestAnimationFrame(sample);
+    return () => cancelAnimationFrame(frame);
   }, [client]);
 
   const stage = useMemo(() => {

@@ -50,6 +50,24 @@ abstract class HybridDailyCallClientBridgeSpec: HybridObject() {
     val __result = setEventListener(listener)
     return __result
   }
+  
+  abstract fun setAudioLevelListener(listener: (clientId: Double, audioLevel: Double, participantId: String) -> Unit): Unit
+  
+  @DoNotStrip
+  @Keep
+  private fun setAudioLevelListener_cxx(listener: Func_void_double_double_std__string): Unit {
+    val __result = setAudioLevelListener(listener)
+    return __result
+  }
+  
+  abstract fun setRemoteAudioLevelsListener(listener: (clientId: Double, levelsJson: String) -> Unit): Unit
+  
+  @DoNotStrip
+  @Keep
+  private fun setRemoteAudioLevelsListener_cxx(listener: Func_void_double_std__string): Unit {
+    val __result = setRemoteAudioLevelsListener(listener)
+    return __result
+  }
 
   // Default implementation of `HybridObject.toString()`
   override fun toString(): String {

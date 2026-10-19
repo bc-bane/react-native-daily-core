@@ -58,6 +58,8 @@ namespace margelo::nitro::daily {
     void destroyClient(double clientId) override;
     std::shared_ptr<Promise<std::string>> perform(double clientId, const std::string& action, const std::string& payloadJson) override;
     void setEventListener(const std::function<void(const DailyCallClientEvent& /* event */)>& listener) override;
+    void setAudioLevelListener(const std::function<void(double /* clientId */, double /* audioLevel */, const std::string& /* participantId */)>& listener) override;
+    void setRemoteAudioLevelsListener(const std::function<void(double /* clientId */, const std::string& /* levelsJson */)>& listener) override;
 
   private:
     jni::global_ref<JHybridDailyCallClientBridgeSpec::JavaPart> _javaPart;

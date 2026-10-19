@@ -98,6 +98,18 @@ namespace margelo::nitro::daily {
         std::rethrow_exception(__result.error());
       }
     }
+    inline void setAudioLevelListener(const std::function<void(double /* clientId */, double /* audioLevel */, const std::string& /* participantId */)>& listener) override {
+      auto __result = _swiftPart.setAudioLevelListener(listener);
+      if (__result.hasError()) [[unlikely]] {
+        std::rethrow_exception(__result.error());
+      }
+    }
+    inline void setRemoteAudioLevelsListener(const std::function<void(double /* clientId */, const std::string& /* levelsJson */)>& listener) override {
+      auto __result = _swiftPart.setRemoteAudioLevelsListener(listener);
+      if (__result.hasError()) [[unlikely]] {
+        std::rethrow_exception(__result.error());
+      }
+    }
 
   private:
     ReactNativeDailyCore::HybridDailyCallClientBridgeSpec_cxx _swiftPart;

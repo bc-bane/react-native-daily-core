@@ -1,12 +1,6 @@
 import type {Participant} from './types';
 
-type NativeEvent = {
-  clientId: number;
-  type: string;
-  payloadJson: string;
-};
-
-const listeners: Array<(event: NativeEvent) => void> = [];
+const listeners: Array<(event: {clientId: number; type: string; payload: unknown}) => void> = [];
 
 const native = {
   createClient: jest.fn(async () => 7),
@@ -19,7 +13,9 @@ const native = {
 jest.mock('./NitroDailyCallClient', () => ({
   __esModule: true,
   getNativeDailyCallClientModule: () => native,
-  subscribeDailyCallClientEvents: (handler: (event: NativeEvent) => void) => {
+  subscribeDailyCallClientEvents: (
+    handler: (event: {clientId: number; type: string; payload: unknown}) => void,
+  ) => {
     listeners.push(handler);
     return {
       remove: () => {
@@ -30,6 +26,8 @@ jest.mock('./NitroDailyCallClient', () => ({
       },
     };
   },
+  subscribeDailyAudioLevels: () => ({remove() {}}),
+  subscribeDailyRemoteAudioLevels: () => ({remove() {}}),
 }));
 
 import {CallClient} from './CallClient';
@@ -43,8 +41,7 @@ function participant(id: string, userName: string): Participant {
 }
 
 function emit(clientId: number, type: string, payload: unknown): void {
-  const event = {clientId, type, payloadJson: JSON.stringify(payload)};
-  listeners.forEach(listener => listener(event));
+  listeners.forEach(listener => listener({clientId, type, payload}));
 }
 
 async function createCall(): Promise<CallClient> {
@@ -156,7 +153,7 @@ describe('CallClient cache', () => {
     handler?.({
       clientId: call.id,
       type: 'participantJoined',
-      payloadJson: JSON.stringify(participant('remote', 'Grace')),
+      payload: participant('remote', 'Grace'),
     });
     expect(call.participants().all).toEqual({});
     expect(call.callState()).toBe('initialized');

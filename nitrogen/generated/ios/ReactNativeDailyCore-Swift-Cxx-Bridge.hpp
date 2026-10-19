@@ -152,6 +152,50 @@ namespace margelo::nitro::daily::bridge::swift {
     return Func_void_DailyCallClientEvent_Wrapper(std::move(value));
   }
   
+  // pragma MARK: std::function<void(double /* clientId */, double /* audioLevel */, const std::string& /* participantId */)>
+  /**
+   * Specialized version of `std::function<void(double, double, const std::string&)>`.
+   */
+  using Func_void_double_double_std__string = std::function<void(double /* clientId */, double /* audioLevel */, const std::string& /* participantId */)>;
+  /**
+   * Wrapper class for a `std::function<void(double / * clientId * /, double / * audioLevel * /, const std::string& / * participantId * /)>`, this can be used from Swift.
+   */
+  class Func_void_double_double_std__string_Wrapper final {
+  public:
+    explicit Func_void_double_double_std__string_Wrapper(std::function<void(double /* clientId */, double /* audioLevel */, const std::string& /* participantId */)>&& func): _function(std::make_unique<std::function<void(double /* clientId */, double /* audioLevel */, const std::string& /* participantId */)>>(std::move(func))) {}
+    inline void call(double clientId, double audioLevel, std::string participantId) const noexcept {
+      _function->operator()(clientId, audioLevel, participantId);
+    }
+  private:
+    std::unique_ptr<std::function<void(double /* clientId */, double /* audioLevel */, const std::string& /* participantId */)>> _function;
+  } SWIFT_NONCOPYABLE;
+  Func_void_double_double_std__string create_Func_void_double_double_std__string(void* NON_NULL swiftClosureWrapper) noexcept;
+  inline Func_void_double_double_std__string_Wrapper wrap_Func_void_double_double_std__string(Func_void_double_double_std__string value) noexcept {
+    return Func_void_double_double_std__string_Wrapper(std::move(value));
+  }
+  
+  // pragma MARK: std::function<void(double /* clientId */, const std::string& /* levelsJson */)>
+  /**
+   * Specialized version of `std::function<void(double, const std::string&)>`.
+   */
+  using Func_void_double_std__string = std::function<void(double /* clientId */, const std::string& /* levelsJson */)>;
+  /**
+   * Wrapper class for a `std::function<void(double / * clientId * /, const std::string& / * levelsJson * /)>`, this can be used from Swift.
+   */
+  class Func_void_double_std__string_Wrapper final {
+  public:
+    explicit Func_void_double_std__string_Wrapper(std::function<void(double /* clientId */, const std::string& /* levelsJson */)>&& func): _function(std::make_unique<std::function<void(double /* clientId */, const std::string& /* levelsJson */)>>(std::move(func))) {}
+    inline void call(double clientId, std::string levelsJson) const noexcept {
+      _function->operator()(clientId, levelsJson);
+    }
+  private:
+    std::unique_ptr<std::function<void(double /* clientId */, const std::string& /* levelsJson */)>> _function;
+  } SWIFT_NONCOPYABLE;
+  Func_void_double_std__string create_Func_void_double_std__string(void* NON_NULL swiftClosureWrapper) noexcept;
+  inline Func_void_double_std__string_Wrapper wrap_Func_void_double_std__string(Func_void_double_std__string value) noexcept {
+    return Func_void_double_std__string_Wrapper(std::move(value));
+  }
+  
   // pragma MARK: std::shared_ptr<HybridDailyCallClientBridgeSpec>
   /**
    * Specialized version of `std::shared_ptr<HybridDailyCallClientBridgeSpec>`.

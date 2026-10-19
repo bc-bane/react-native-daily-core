@@ -18,6 +18,8 @@ namespace margelo::nitro::daily {
       prototype.registerHybridMethod("destroyClient", &HybridDailyCallClientBridgeSpec::destroyClient);
       prototype.registerHybridMethod("perform", &HybridDailyCallClientBridgeSpec::perform);
       prototype.registerHybridMethod("setEventListener", &HybridDailyCallClientBridgeSpec::setEventListener);
+      prototype.registerHybridMethod("setAudioLevelListener", &HybridDailyCallClientBridgeSpec::setAudioLevelListener);
+      prototype.registerHybridMethod("setRemoteAudioLevelsListener", &HybridDailyCallClientBridgeSpec::setRemoteAudioLevelsListener);
     });
   }
 

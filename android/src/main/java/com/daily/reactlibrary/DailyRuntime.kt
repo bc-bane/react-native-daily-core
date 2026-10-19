@@ -18,8 +18,10 @@ internal object DailyRuntime {
   }
 
   fun detach() {
-    pendingScreenShare?.callback?.invoke(null, "CallClient module invalidated")
+    val pending = pendingScreenShare
     pendingScreenShare = null
+    applicationContext?.let { DailyScreenShareForegroundService.stop(it) }
+    pending?.callback?.invoke(null, "CallClient module invalidated")
     applicationContext = null
     currentActivity = null
   }
@@ -34,32 +36,23 @@ internal object DailyRuntime {
   fun currentActivity(): Activity? = currentActivity?.invoke()
 
   fun handleScreenShareResult(resultCode: Int, data: Intent?) {
-    val pending = pendingScreenShare
-    pendingScreenShare = null
-    if (pending == null) return
+    val pending = pendingScreenShare ?: return
+    val appContext = applicationContextOrNull()
     if (resultCode != Activity.RESULT_OK || data == null) {
+      pendingScreenShare = null
+      appContext?.let { DailyScreenShareForegroundService.stop(it) }
       pending.callback(null, "Screen share permission was not granted")
       return
     }
-    val client = DailyClientRegistry.client(pending.clientId)
-    if (client == null) {
-      pending.callback(null, "CallClient was released")
-      return
-    }
-    val appContext = applicationContextOrNull()
     if (appContext == null) {
+      pendingScreenShare = null
       pending.callback(null, "CallClient module invalidated")
       return
     }
-    DailyScreenShareForegroundService.start(appContext)
-    client.startScreenShare(data) { result ->
-      val error = result.error?.msg
-      if (error != null) {
-        DailyScreenShareForegroundService.stop(appContext)
-        pending.callback(null, error)
-      } else {
-        pending.callback("{}", null)
-      }
+    pending.captureIntent = data
+    if (!DailyScreenShareForegroundService.start(appContext, data)) {
+      pendingScreenShare = null
+      pending.callback(null, "Screen share foreground service failed to start")
     }
   }
 }

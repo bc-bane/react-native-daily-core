@@ -30,7 +30,7 @@ The old install set the app platform to iOS 12 because of `react-native-webrtc`,
 platform :ios, '12.0'
 ```
 
-The Daily iOS SDK supports iOS 14. This package’s podspec requires iOS 16.4, which matches Expo SDK 58. Set the app platform to at least 16.4:
+This library requires iOS 16.4. Set the app platform to at least 16.4:
 
 ```ruby
 platform :ios, '16.4'
@@ -227,9 +227,9 @@ These events are gone because the feature is gone: `loading`, `loaded`, `load-at
 | `getNetworkStats` | `networkStats()` |
 | `room` / `preAuth` / `load` | `callConfigFor(url, token)` |
 | `updateParticipant` / `updateParticipants` | `updateRemoteParticipants` |
-| `startRecording` / `updateRecording` / `stopRecording` | same names. `instanceId` is `streamId`. Layout and streaming-option objects from daily-js are not accepted. `startRecording` resolves to the stream id. |
+| `startRecording` / `stopRecording` | same names. `instanceId` is `streamId`. Layout and streaming-option objects from daily-js are not accepted. `startRecording` resolves to the stream id. |
 | `startLiveStreaming` | `startLiveStream({rtmpUrls, preconfigured, streamId, forceNew})` |
-| `updateLiveStreaming` | `updateLiveStream({streamId})` |
+| `updateLiveStreaming` | Not available. `stopLiveStream(streamId)` stops a stream. Layout updates are not mapped yet. |
 | `stopLiveStreaming` | `stopLiveStream(streamId)` |
 | `addLiveStreamingEndpoints` / `removeLiveStreamingEndpoints` | same names. Only preconfigured endpoints are accepted. An RTMP URL cannot be added or removed on a stream that is already running. |
 | `startTranscription` / `stopTranscription` | same names |

@@ -74,6 +74,10 @@ public class DailyClientRegistry: NSObject {
   @objc public static let shared = DailyClientRegistry()
   @objc public var eventSink: ((NSNumber, NSString, NSString) -> Void)?
   private var eventListenerOwner: UUID?
+  var audioLevelSink: ((NSNumber, NSNumber, NSString) -> Void)?
+  private var audioLevelOwner: UUID?
+  var remoteAudioLevelsSink: ((NSNumber, NSString) -> Void)?
+  private var remoteAudioLevelsOwner: UUID?
 
   static let moduleUnloadNotification = Notification.Name("DailyCallClientModuleUnload")
 
@@ -101,6 +105,10 @@ public class DailyClientRegistry: NSObject {
       MainActor.assumeIsolated {
         DailyClientRegistry.shared.eventListenerOwner = nil
         DailyClientRegistry.shared.eventSink = nil
+        DailyClientRegistry.shared.audioLevelOwner = nil
+        DailyClientRegistry.shared.audioLevelSink = nil
+        DailyClientRegistry.shared.remoteAudioLevelsOwner = nil
+        DailyClientRegistry.shared.remoteAudioLevelsSink = nil
         DailyClientRegistry.shared.destroyAll()
       }
     }
@@ -116,6 +124,27 @@ public class DailyClientRegistry: NSObject {
       eventListenerOwner = nil
       eventSink = nil
     }
+  }
+
+  func setAudioLevelListener(owner: UUID, sink: @escaping (NSNumber, NSNumber, NSString) -> Void) {
+    audioLevelOwner = owner
+    audioLevelSink = sink
+  }
+
+  func clearAudioLevelListener(owner: UUID) {
+    if audioLevelOwner == owner {
+      audioLevelOwner = nil
+      audioLevelSink = nil
+    }
+    if remoteAudioLevelsOwner == owner {
+      remoteAudioLevelsOwner = nil
+      remoteAudioLevelsSink = nil
+    }
+  }
+
+  func setRemoteAudioLevelsListener(owner: UUID, sink: @escaping (NSNumber, NSString) -> Void) {
+    remoteAudioLevelsOwner = owner
+    remoteAudioLevelsSink = sink
   }
 
   private var nextId = 1
@@ -211,6 +240,16 @@ public class DailyClientRegistry: NSObject {
     eventSink?(NSNumber(value: clientId), type as NSString, payload as NSString)
   }
 
+  fileprivate func emitAudioLevel(clientId: Int, audioLevel: Double, participantId: String) {
+    audioLevelSink?(NSNumber(value: clientId), NSNumber(value: audioLevel), participantId as NSString)
+  }
+
+  fileprivate func emitRemoteAudioLevels(clientId: Int, levels: [String: Double]) {
+    var body: [String: NSNumber] = [:]
+    levels.forEach { body[$0.key] = NSNumber(value: $0.value) }
+    remoteAudioLevelsSink?(NSNumber(value: clientId), stringify(body) as NSString)
+  }
+
   fileprivate func box(_ clientId: Int) -> CallBox? {
     boxes[clientId]
   }
@@ -226,23 +265,28 @@ public class DailyClientRegistry: NSObject {
 }
 
 private final class OnceCompletion: @unchecked Sendable {
+  private static let timeoutSeconds: TimeInterval = 30
   private let lock = NSLock()
   private var completion: Completion?
+  private var timeoutWorkItem: DispatchWorkItem?
 
   init(_ completion: @escaping Completion) {
     self.completion = completion
+    let work = DispatchWorkItem { [weak self] in
+      self?.call(nil, "CallClient action did not finish")
+    }
+    timeoutWorkItem = work
+    DispatchQueue.main.asyncAfter(deadline: .now() + Self.timeoutSeconds, execute: work)
   }
 
   func call(_ json: String?, _ error: String?) {
     lock.lock()
     let completion = self.completion
     self.completion = nil
+    timeoutWorkItem?.cancel()
+    timeoutWorkItem = nil
     lock.unlock()
     completion?(json, error)
-  }
-
-  deinit {
-    call(nil, "CallClient action did not finish")
   }
 }
 
@@ -259,7 +303,11 @@ private final class CallBox: NSObject, CallClientDelegate {
   }
 
   func teardown() {
+    let state = client.callState
     client.delegate = nil
+    if state == .joined || state == .joining {
+      client.leave { _ in }
+    }
   }
 
   func perform(action: String, payloadJson: String, completion: @escaping Completion) {
@@ -294,7 +342,7 @@ private final class CallBox: NSObject, CallClientDelegate {
     case "setSubscriptionProfile":
       setProfile(payload, completion)
     case "updatePermissions":
-      client.updatePermissions(permissions(payload)) { result in self.finish(result, completion) }
+      updatePermissions(payload, completion)
     case "updateRemoteParticipants":
       updateRemotes(payload, completion)
     case "ejectRemoteParticipants":
@@ -316,14 +364,10 @@ private final class CallBox: NSObject, CallClientDelegate {
       }
     case "stopRecording":
       client.stopRecording(streamID: streamId(payload["streamId"] as? String)) { result in self.finish(result, completion) }
-    case "updateRecording":
-      client.updateRecording(streamingSettings: StreamingSettingsUpdate(), streamID: streamId(payload["streamId"] as? String)) { result in self.finish(result, completion) }
     case "startLiveStream":
       startLiveStream(payload, completion)
     case "stopLiveStream":
       client.stopLiveStream(streamID: streamId(payload["streamId"] as? String)) { result in self.finish(result, completion) }
-    case "updateLiveStream":
-      client.updateLiveStream(streamingSettings: StreamingSettingsUpdate(), streamID: streamId(payload["streamId"] as? String)) { result in self.finish(result, completion) }
     case "addLiveStreamingEndpoints":
       guard let endpoints = preconfigured(payload) else {
         completion(nil, "addLiveStreamingEndpoints only accepts preconfigured endpoints")
@@ -456,7 +500,9 @@ private final class CallBox: NSObject, CallClientDelegate {
       picker.showsMicrophoneButton = false
       window.addSubview(picker)
       picker.subviews.compactMap { $0 as? UIButton }.first?.sendActions(for: .touchUpInside)
-      picker.removeFromSuperview()
+      DispatchQueue.main.async {
+        picker.removeFromSuperview()
+      }
       completion("{}", nil)
     }
   }
@@ -516,6 +562,20 @@ private final class CallBox: NSObject, CallClientDelegate {
       return
     }
     client.setSubscriptionProfile(for: id, profile) { result in self.finish(result, completion) }
+  }
+
+  private func updatePermissions(_ payload: [String: Any], _ completion: @escaping Completion) {
+    guard let id = participant(payload["participantId"] as? String) else {
+      completion(nil, "A participant id is required")
+      return
+    }
+    if client.participants.local.id == id {
+      client.updatePermissions(permissions(payload)) { result in self.finish(result, completion) }
+      return
+    }
+    var update = RemoteParticipantUpdate()
+    update.permissions = permissions(payload)
+    client.updateRemoteParticipants([id: update]) { result in self.finish(result, completion) }
   }
 
   private func updateRemotes(_ payload: [String: Any], _ completion: @escaping Completion) {
@@ -718,15 +778,17 @@ private final class CallBox: NSObject, CallClientDelegate {
 
   nonisolated func callClient(_ callClient: CallClient, localAudioLevel audioLevel: Float) {
     hop {
-      self.emit("localAudioLevel", ["audioLevel": audioLevel])
+      DailyClientRegistry.shared.emitAudioLevel(clientId: self.clientId, audioLevel: Double(audioLevel), participantId: "")
     }
   }
 
   nonisolated func callClient(_ callClient: CallClient, remoteParticipantsAudioLevel participantsAudioLevel: [ParticipantID: Float]) {
     hop {
-      var levels: [String: Float] = [:]
-      participantsAudioLevel.forEach { levels[$0.key.uuidString] = $0.value }
-      self.emit("remoteParticipantsAudioLevel", levels)
+      var levels: [String: Double] = [:]
+      participantsAudioLevel.forEach { id, level in
+        levels[id.uuidString] = Double(level)
+      }
+      DailyClientRegistry.shared.emitRemoteAudioLevels(clientId: self.clientId, levels: levels)
     }
   }
 

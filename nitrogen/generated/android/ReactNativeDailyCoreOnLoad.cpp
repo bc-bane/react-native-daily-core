@@ -17,6 +17,8 @@
 
 #include "JHybridDailyCallClientBridgeSpec.hpp"
 #include "JFunc_void_DailyCallClientEvent.hpp"
+#include "JFunc_void_double_double_std__string.hpp"
+#include "JFunc_void_double_std__string.hpp"
 #include "JHybridDailyVideoViewSpec.hpp"
 #include "views/JHybridDailyVideoViewStateUpdater.hpp"
 #include <NitroModules/DefaultConstructableObject.hpp>
@@ -53,6 +55,8 @@ void registerAllNatives() {
   // Register native JNI methods
   margelo::nitro::daily::JHybridDailyCallClientBridgeSpec::CxxPart::registerNatives();
   margelo::nitro::daily::JFunc_void_DailyCallClientEvent_cxx::registerNatives();
+  margelo::nitro::daily::JFunc_void_double_double_std__string_cxx::registerNatives();
+  margelo::nitro::daily::JFunc_void_double_std__string_cxx::registerNatives();
   margelo::nitro::daily::JHybridDailyVideoViewSpec::CxxPart::registerNatives();
   margelo::nitro::daily::views::JHybridDailyVideoViewStateUpdater::registerNatives();
 

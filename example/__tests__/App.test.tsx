@@ -25,6 +25,8 @@ jest.mock('../../src/NitroDailyCallClient', () => {
       perform: () => Promise.resolve('{}'),
     }),
     subscribeDailyCallClientEvents: () => ({remove: () => undefined}),
+    subscribeDailyAudioLevels: () => ({remove: () => undefined}),
+    subscribeDailyRemoteAudioLevels: () => ({remove: () => undefined}),
   };
 });
 
