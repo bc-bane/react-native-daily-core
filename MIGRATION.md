@@ -270,35 +270,10 @@ These daily-js methods are not on the iOS or Android `CallClient` in SDK 0.40.0,
 - `geo`
 - `updateTranscription`
 - `setNativeInCallAudioMode`, `nativeInCallAudioMode`
-- `startCamera`
-- `cycleCamera`, `setCamera`, `getCameraFacingMode`
-- `getCameraZoom`, `isCameraTorchAvailable`
 - `isLocalAudioLevelObserverRunning`, `isRemoteParticipantsAudioLevelObserverRunning`
 - `supportedBrowser`
 - iframe and prebuilt methods (`load`, `join` with a Daily Prebuilt iframe, `startCamera` as a prejoin step)
 
 `reactNativeConfig.disableAutoDeviceManagement` is not reimplemented. The native SDK owns the audio session and does not expose that switch.
-
-## Pre-merge QA (mobile video call)
-
-Run on **iOS and Android** for **Tinker** and **TechTalk** before merging a `react-native-daily-core` upgrade. Web (`@daily-co/daily-js`) is unchanged.
-
-### Build / install smoke
-
-1. `pnpm install` at monorepo root (use **`link:`** to the library so the Expo module sources are present).
-2. Confirm the app config lists the `react-native-daily-core` plugin, then prebuild or run the Expo native build.
-3. Android: clean rebuild after a dependency change.
-
-### Runtime matrix
-
-| Area | What to verify |
-| --- | --- |
-| Join | Enter a scheduled or matched call; remote and local video render. |
-| Audio / video | Mute and unmute mic; turn camera off and on; flip camera (where supported). |
-| Chat | Send and receive in-call app messages; remote participant list updates. |
-| Leave | End call from in-call UI; no crash; `leave()` + `release()` cleanup. |
-| Home tab | After leave, no stale “rejoin” state; active call batch id clears; can start a new request. |
-| Background | Optional: brief background/foreground during call; AV recovers or fails gracefully. |
-| TechTalk | Same join/leave path via shared `VideoCall` layout. |
 
 If Nitro fails at runtime (for example `NitroModules.createHybridObject` throws), confirm New Architecture is enabled and you ran `pod install` plus a clean native rebuild after upgrading. `react-native-nitro-modules` is installed with this package.
